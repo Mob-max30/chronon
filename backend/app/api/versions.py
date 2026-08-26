@@ -112,3 +112,81 @@ async def compare_versions(
         data=diff.model_dump(),
         message="Version diff calculated successfully",
     )
+
+
+@router.get("/detail/{version_id}", response_model=APIResponse)
+async def get_version_by_id(version_id: int, db: AsyncSession = Depends(get_db)):
+    """Retrieve complete timetable version snapshot with its scheduled sessions by version ID."""
+    service = VersioningService(db)
+    version = await service.get_version_with_sessions(version_id)
+    if not version:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Timetable version not found")
+
+    session_contracts = [
+        TimetableSessionContract(
+            id=s.id,
+            version_id=s.version_id,
+            subject_id=s.subject_id,
+            faculty_id=s.faculty_id,
+            section_id=s.section_id,
+            batch_id=s.batch_id,
+            room_id=s.room_id,
+            lab_id=s.lab_id,
+            time_slot_id=s.time_slot_id,
+        )
+        for s in (version.sessions or [])
+    ]
+
+    return APIResponse(
+        data=TimetableVersionDetail(
+            id=version.id,
+            timetable_id=version.timetable_id,
+            version_number=version.version_number,
+            is_active=version.is_active,
+            notes=version.notes,
+            created_at=version.created_at,
+            sessions=session_contracts,
+        ).model_dump(),
+        message="Version snapshot retrieved",
+    )
+
+
+@router.get("/{from_version_id}/compare/{to_version_id}", response_model=APIResponse)
+async def compare_versions_direct(
+    from_version_id: int,
+    to_version_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Computes session-by-session diff between two timetable versions directly by version IDs."""
+    service = VersioningService(db)
+    v_from = await service.get_version_with_sessions(from_version_id)
+    v_to = await service.get_version_with_sessions(to_version_id)
+
+    if not v_from or not v_to:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="One or both versions not found")
+
+    diff = service.compute_version_diff(v_from.timetable_id, v_from, v_to)
+    return APIResponse(
+        data=diff.model_dump(),
+        message="Version diff calculated successfully",
+    )
+
+
+@router.post("/restore/{version_id}", response_model=APIResponse)
+async def restore_version_direct(
+    version_id: int,
+    notes: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Restores a historical version by version ID directly, preserving snapshot immutability."""
+    service = VersioningService(db)
+    version = await service.get_version_with_sessions(version_id)
+    if not version:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Version not found")
+    restored = await service.restore_version_as_new(version.timetable_id, version_id, notes=notes)
+    if not restored:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Failed to restore version")
+    return APIResponse(
+        data=TimetableVersionRead.model_validate(restored),
+        message=f"Version {version_id} restored as new Version {restored.version_number}",
+    )

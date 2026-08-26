@@ -90,3 +90,28 @@ async def get_timetable_runs(timetable_id: int, db: AsyncSession = Depends(get_d
         data=[GenerationRunRead.model_validate(r) for r in runs],
         message="Timetable generation runs retrieved",
     )
+
+
+# Additional router to satisfy Section 47 canonical specification (/api/v1/generation-runs)
+runs_router = APIRouter(prefix="/generation-runs", tags=["Generation Runs Canonical API"])
+
+
+@runs_router.post("", response_model=APIResponse, status_code=status.HTTP_201_CREATED)
+async def trigger_generation_canonical(
+    payload: GenerationTriggerRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Canonical trigger endpoint matching Section 47 specification: POST /api/v1/generation-runs"""
+    return await trigger_generation(payload, db)
+
+
+@runs_router.get("/{run_id}", response_model=APIResponse)
+async def get_generation_run_status_canonical(run_id: int, db: AsyncSession = Depends(get_db)):
+    """Canonical status endpoint matching Section 47 specification: GET /api/v1/generation-runs/{id}"""
+    return await get_generation_run_status(run_id, db)
+
+
+@runs_router.post("/{run_id}/cancel", response_model=APIResponse)
+async def cancel_generation_run_canonical(run_id: int, db: AsyncSession = Depends(get_db)):
+    """Canonical cancellation endpoint matching Section 47 specification: POST /api/v1/generation-runs/{id}/cancel"""
+    return await cancel_generation_run(run_id, db)

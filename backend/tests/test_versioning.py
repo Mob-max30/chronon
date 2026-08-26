@@ -157,3 +157,24 @@ async def test_api_version_endpoints(async_client: AsyncClient, db_session: Asyn
     res_rest = await async_client.post(f"/api/v1/versions/{tt.id}/version/{v2.id}/restore")
     assert res_rest.status_code == 200
     assert res_rest.json()["data"]["version_number"] == 3
+
+    # 6. Test GET /api/v1/timetables/{id}/versions
+    res_tt_vers = await async_client.get(f"/api/v1/timetables/{tt.id}/versions")
+    assert res_tt_vers.status_code == 200
+    assert len(res_tt_vers.json()["data"]) == 3
+
+    # 7. Test direct detail GET /api/v1/versions/detail/{version_id}
+    res_dir_det = await async_client.get(f"/api/v1/versions/detail/{v1.id}")
+    assert res_dir_det.status_code == 200
+    assert res_dir_det.json()["data"]["version_number"] == 1
+    assert len(res_dir_det.json()["data"]["sessions"]) == 1
+
+    # 8. Test direct compare GET /api/v1/versions/{from_id}/compare/{to_id}
+    res_dir_comp = await async_client.get(f"/api/v1/versions/{v1.id}/compare/{v2.id}")
+    assert res_dir_comp.status_code == 200
+    assert res_dir_comp.json()["data"]["total_differences"] >= 1
+
+    # 9. Test direct restore POST /api/v1/versions/restore/{version_id}
+    res_dir_rest = await async_client.post(f"/api/v1/versions/restore/{v1.id}")
+    assert res_dir_rest.status_code == 200
+    assert res_dir_rest.json()["data"]["version_number"] == 4
