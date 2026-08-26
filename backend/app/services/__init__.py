@@ -5,7 +5,7 @@ from app.services.academic_service import AcademicService
 from app.services.ingestion_service import IngestionService
 from app.services.versioning_service import VersioningService
 from app.services.orchestration_service import OrchestrationService
-from app.services.pipeline_service import PipelineService
+from app.services.pipeline_service import build_scheduling_input_from_db
 from app.services.resource_calc import (
     calculate_sections,
     calculate_batches,
@@ -23,7 +23,7 @@ __all__ = [
     "IngestionService",
     "VersioningService",
     "OrchestrationService",
-    "PipelineService",
+    "build_scheduling_input_from_db",
     "calculate_sections",
     "calculate_batches",
     "generate_time_slots",
