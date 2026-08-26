@@ -1,0 +1,25 @@
+[project]
+name = "chronon-backend"
+version = "0.1.0"
+description = "Deterministic Academic Timetable Generation System"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    "sqlalchemy>=2.0.28",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.1",
+    "ortools>=9.9.3963",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = "test_*.py"
+
+[tool.flake8]
+max-line-length = 120
+exclude = [".git", "__pycache__", "alembic", ".venv", "venv"]
