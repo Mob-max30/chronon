@@ -406,6 +406,15 @@ async def export_timetable(
             headers={"Content-Disposition": f"attachment; filename=timetable_{timetable_id}_{view_type.lower()}.csv"},
         )
 
+    if export_format.lower() == "json":
+        import json
+        json_str = json.dumps(matrix_data, indent=2)
+        return Response(
+            content=json_str,
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename=timetable_{timetable_id}_{view_type.lower()}.json"},
+        )
+
     return APIResponse(
         data={"timetable_id": timetable_id, "export_format": export_format, "matrix": matrix_data},
         message="Timetable exported successfully",

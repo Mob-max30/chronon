@@ -227,6 +227,15 @@ export async function calculateSectionsAPI(payload: {
   return json.data;
 }
 
+export async function createSection(payload: any) {
+  const res = await fetch(`${API_BASE}/resources/sections`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return res.json();
+}
+
 export async function calculateBatchesAPI(payload: {
   section_students: number;
   lab_capacity: number;
@@ -243,6 +252,15 @@ export async function calculateBatchesAPI(payload: {
   if (!res.ok) throw new Error("Failed to calculate batches");
   const json = await res.json();
   return json.data;
+}
+
+export async function createBatch(payload: any) {
+  const res = await fetch(`${API_BASE}/resources/batches`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return res.json();
 }
 
 export async function getRooms() {
