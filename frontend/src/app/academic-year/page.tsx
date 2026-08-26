@@ -30,7 +30,7 @@ export default function AcademicYearPage() {
     if (!newYearName) return;
     setLoading(true);
     try {
-      await createAcademicYear(newYearName, isCurrent);
+      await createAcademicYear({ name: newYearName, is_current: isCurrent });
       setNewYearName("");
       await loadYears();
     } finally {

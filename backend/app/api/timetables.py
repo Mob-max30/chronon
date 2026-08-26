@@ -176,59 +176,67 @@ def get_default_time_slots() -> List[Dict[str, Any]]:
 @router.get("", response_model=APIResponse)
 async def list_timetables(
     academic_year_id: Optional[int] = None,
-    status_filter: Optional[TimetableStatus] = None,
+    semester_id: Optional[int] = None,
+    status_filter: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    """List timetables optionally filtered by academic year and status."""
-    stmt = select(Timetable).options(selectinload(Timetable.versions))
+    """List all timetables, optionally filtered by academic year, semester, or status."""
+    stmt = select(Timetable).options(
+        selectinload(Timetable.academic_year),
+        selectinload(Timetable.versions),
+    ).order_by(Timetable.id.desc())
+
     if academic_year_id:
         stmt = stmt.where(Timetable.academic_year_id == academic_year_id)
+    if semester_id:
+        stmt = stmt.where(Timetable.semester_id == semester_id)
     if status_filter:
         stmt = stmt.where(Timetable.status == status_filter)
-    stmt = stmt.order_by(Timetable.id.desc())
 
     result = await db.execute(stmt)
     timetables = result.scalars().all()
+    items = [TimetableRead.model_validate(t) for t in timetables]
+    return APIResponse(data=items, message=f"Found {len(items)} timetables")
 
-    data = []
-    for t in timetables:
-        data.append({
-            "id": t.id,
-            "name": t.name,
-            "academic_year_id": t.academic_year_id,
-            "status": t.status.value if hasattr(t.status, "value") else str(t.status),
-            "versions_count": len(t.versions),
-        })
 
-    if not data and not academic_year_id and not status_filter:
-        data = [
-            {
-                "id": 1,
-                "name": "Odd Semester 2026-2027 Timetable",
-                "academic_year_id": 1,
-                "status": "PUBLISHED",
-                "versions_count": 1,
-            }
-        ]
+@router.get("/{timetable_id}", response_model=APIResponse)
+async def get_timetable(
+    timetable_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get timetable container details by ID."""
+    stmt = select(Timetable).options(
+        selectinload(Timetable.academic_year),
+        selectinload(Timetable.versions),
+    ).where(Timetable.id == timetable_id)
 
-    return APIResponse(data=data, message="Timetables retrieved successfully")
+    result = await db.execute(stmt)
+    timetable = result.scalars().first()
+    if not timetable:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Timetable container {timetable_id} not found",
+        )
+    return APIResponse(data=TimetableRead.model_validate(timetable), message="Timetable retrieved")
 
 
 @router.post("", response_model=APIResponse, status_code=status.HTTP_201_CREATED)
-async def create_timetable(payload: TimetableCreate, db: AsyncSession = Depends(get_db)):
-    """Create a new timetable container for an academic year."""
+async def create_timetable(
+    payload: TimetableCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a new timetable container."""
     new_timetable = Timetable(
         academic_year_id=payload.academic_year_id,
         name=payload.name,
-        status=payload.status,
+        status=payload.status or TimetableStatus.DRAFT,
     )
     db.add(new_timetable)
     await db.commit()
     await db.refresh(new_timetable)
-
     return APIResponse(
         data=TimetableRead.model_validate(new_timetable),
-        message="Timetable container created",
+        message="Timetable created successfully",
     )
 
 
@@ -238,17 +246,20 @@ async def update_timetable_status(
     payload: TimetableStatusUpdate,
     db: AsyncSession = Depends(get_db),
 ):
-    """Update timetable status (DRAFT -> PUBLISHED -> ARCHIVED)."""
+    """Update timetable container lifecycle status (DRAFT, ACTIVE, ARCHIVED)."""
     stmt = select(Timetable).where(Timetable.id == timetable_id)
-    result = await db.execute(stmt)
-    timetable = result.scalars().first()
+    res = await db.execute(stmt)
+    timetable = res.scalars().first()
+
     if not timetable:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Timetable not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Timetable container {timetable_id} not found",
+        )
 
     timetable.status = payload.status
     await db.commit()
     await db.refresh(timetable)
-
     return APIResponse(
         data=TimetableRead.model_validate(timetable),
         message=f"Timetable status updated to {payload.status.value}",
@@ -258,8 +269,8 @@ async def update_timetable_status(
 @router.get("/{timetable_id}/view", response_model=APIResponse)
 async def get_timetable_view(
     timetable_id: int,
+    view_type: str = Query("SECTION", description="SECTION, FACULTY, ROOM, LAB, STREAM, or CYCLE_GROUP"),
     version_id: Optional[int] = None,
-    view_type: str = Query("SECTION", description="SECTION, FACULTY, ROOM, LAB, BATCH, FIRST_YEAR_CYCLE"),
     section_id: Optional[int] = None,
     faculty_id: Optional[int] = None,
     room_id: Optional[int] = None,
@@ -393,6 +404,15 @@ async def export_timetable(
             content=csv_text,
             media_type="text/csv",
             headers={"Content-Disposition": f"attachment; filename=timetable_{timetable_id}_{view_type.lower()}.csv"},
+        )
+
+    if export_format.lower() == "json":
+        import json
+        json_str = json.dumps(matrix_data, indent=2)
+        return Response(
+            content=json_str,
+            media_type="application/json",
+            headers={"Content-Disposition": f"attachment; filename=timetable_{timetable_id}_{view_type.lower()}.json"},
         )
 
     return APIResponse(

@@ -7,6 +7,7 @@ from app.schemas.contracts import TimetableSessionContract, ValidationResult
 
 class TimetableBase(BaseModel):
     academic_year_id: int
+    semester_id: Optional[int] = None
     name: str
     status: TimetableStatus = TimetableStatus.DRAFT
 

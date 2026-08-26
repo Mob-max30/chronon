@@ -14,11 +14,12 @@ export default function HistoricalYearPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    getHistoricalAcademicYears().then((res) => {
-      if (res?.data) {
-        setHistoricalYears(res.data);
-        if (res.data.length > 0) {
-          setSelectedYearId(res.data[0].id);
+    getHistoricalAcademicYears().then((res: any) => {
+      const data = Array.isArray(res) ? res : res?.data;
+      if (data) {
+        setHistoricalYears(data);
+        if (data.length > 0) {
+          setSelectedYearId(data[0].id);
         }
       }
     });
@@ -28,8 +29,9 @@ export default function HistoricalYearPage() {
     if (selectedYearId) {
       setLoading(true);
       getTimetableVersions(1) // Default timetable container ID
-        .then((res) => {
-          if (res?.data) setVersions(res.data);
+        .then((res: any) => {
+          const data = Array.isArray(res) ? res : res?.data;
+          if (data) setVersions(data);
         })
         .finally(() => setLoading(false));
     }

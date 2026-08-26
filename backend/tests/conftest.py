@@ -51,13 +51,11 @@ fastapi_app.dependency_overrides[get_db] = override_get_db
 
 @pytest_asyncio.fixture(autouse=True)
 async def init_test_database():
-    """Create all tables before each test and drop them after."""
+    """Ensure clean schema before each test."""
     fastapi_app.dependency_overrides[get_db] = override_get_db
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest_asyncio.fixture
