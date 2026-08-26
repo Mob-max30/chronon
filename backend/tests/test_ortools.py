@@ -12,13 +12,16 @@ def test_ortools_import_and_basic_solve():
     sample_input = get_sample_scheduling_input()
     solver_instance = ChrononCPSATSolver(sample_input)
     solver_instance.build_minimal_prototype_model()
-    status, duration, sessions = solver_instance.solve()
+    status, duration, sessions, quality, solver_stats = solver_instance.solve()
 
     assert status in ("SUCCESS", "FEASIBLE", "OPTIMAL")
     assert duration >= 0.0
+    assert len(sessions) > 0
 
 
 def test_generate_single_generator():
     sample_input = get_sample_scheduling_input()
-    status, duration, sessions = generate_single(sample_input)
-    assert status in ("SUCCESS", "FEASIBLE", "OPTIMAL")
+    res = generate_single(sample_input)
+    assert res.status in ("SUCCESS", "FEASIBLE", "OPTIMAL")
+    assert res.is_valid
+    assert len(res.sessions) > 0
