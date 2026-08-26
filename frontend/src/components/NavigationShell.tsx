@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { Clock, Calendar, BookOpen, Users, Cpu, FileText } from "lucide-react";
 import Link from "next/link";
+import { Clock, Calendar, BookOpen, Users, Cpu, FileText, Grid } from "lucide-react";
 
 export function NavigationShell() {
   return (
@@ -20,27 +20,30 @@ export function NavigationShell() {
           </div>
         </Link>
 
-        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-400">
+        <nav className="hidden md:flex items-center space-x-5 text-sm font-medium text-slate-400">
           <Link href="/academic-year" className="hover:text-slate-100 transition flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-blue-400" /> Academic Years
           </Link>
-          <span className="text-slate-600 flex items-center gap-1.5 cursor-not-allowed">
-            <BookOpen className="w-4 h-4" /> Curriculum (Ujwal)
-          </span>
-          <span className="text-slate-600 flex items-center gap-1.5 cursor-not-allowed">
-            <Users className="w-4 h-4" /> Resources (Nivish)
-          </span>
+          <Link href="/academic" className="hover:text-slate-100 transition flex items-center gap-1.5">
+            <BookOpen className="w-4 h-4 text-emerald-400" /> Curriculum & Ingestion
+          </Link>
+          <Link href="/resources" className="hover:text-slate-100 transition flex items-center gap-1.5">
+            <Users className="w-4 h-4 text-amber-400" /> Resources
+          </Link>
           <Link href="/generation" className="hover:text-slate-100 transition flex items-center gap-1.5">
             <Cpu className="w-4 h-4 text-purple-400" /> Orchestration
           </Link>
           <Link href="/versions" className="hover:text-slate-100 transition flex items-center gap-1.5">
-            <FileText className="w-4 h-4 text-emerald-400" /> Versions & Diffs
+            <FileText className="w-4 h-4 text-cyan-400" /> Versions
+          </Link>
+          <Link href="/timetables" className="hover:text-slate-100 transition flex items-center gap-1.5">
+            <Grid className="w-4 h-4 text-rose-400" /> Timetables
           </Link>
         </nav>
 
         <div className="flex items-center space-x-3">
           <div className="text-xs text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
-            Branch: <span className="font-mono text-blue-400 font-bold">pranav</span>
+            Branch: <span className="font-mono text-emerald-400 font-bold">dev (integrated)</span>
           </div>
         </div>
       </div>
