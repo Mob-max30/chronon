@@ -173,5 +173,4 @@ docker-compose up --build
 
 ## 📄 Full Specification Reference
 
-For the comprehensive, unabridged product specification, see [CHRONON_FINAL_README.txt](file:///c:/Users/nivis/OneDrive/Desktop/chronon/CHRONON_FINAL_README.txt).
-
+For the comprehensive, unabridged product specification, see [CHRONON_FINAL_README.txt](./CHRONON_FINAL_README.txt).
