@@ -27,8 +27,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -36,6 +36,8 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.tsbuildinfo
+!frontend/src/lib/
 
 # Testing & Coverage
 .pytest_cache/
