@@ -397,3 +397,83 @@ def get_manual_invalid_timetable() -> List[TimetableSessionContract]:
             time_slot_id=2,
         ),
     ]
+
+
+def get_first_year_joint_fixture() -> SchedulingInput:
+    """
+    Standard First-Year Joint Scheduling Fixture.
+    Covers Semester 1 and Semester 2 with paired Physics and Chemistry cycle sections across CSE Stream.
+    """
+    rooms = [
+        RoomContract(id=1, name="R101", capacity=60, building="1st Year Block"),
+        RoomContract(id=2, name="R102", capacity=60, building="1st Year Block"),
+    ]
+    labs = [
+        LabContract(id=1, name="Physics Lab", capacity=30, building="Science Block", lab_type="PHYSICS"),
+        LabContract(id=2, name="Chemistry Lab", capacity=30, building="Science Block", lab_type="CHEMISTRY"),
+    ]
+    sections = [
+        SectionContract(id=10, branch_id=1, semester_id=1, name="1A-PHY", student_count=60, room_id=1, stream_id=1, cycle_group="PHYSICS_CYCLE"),
+        SectionContract(id=11, branch_id=1, semester_id=1, name="1B-CHEM", student_count=60, room_id=2, stream_id=1, cycle_group="CHEMISTRY_CYCLE"),
+    ]
+    batches = [
+        BatchContract(id=101, section_id=10, name="1A-B1", student_count=30),
+        BatchContract(id=102, section_id=10, name="1A-B2", student_count=30),
+        BatchContract(id=111, section_id=11, name="1B-B1", student_count=30),
+        BatchContract(id=112, section_id=11, name="1B-B2", student_count=30),
+    ]
+
+    # Create 5 days x 4 periods = 20 slots
+    time_slots: List[TimeSlotContract] = []
+    slot_id = 1
+    for day in range(5):
+        for p in range(1, 5):
+            time_slots.append(
+                TimeSlotContract(
+                    id=slot_id,
+                    day_of_week=day,
+                    period_index=p,
+                    start_time=time(9 + p - 1, 0),
+                    end_time=time(10 + p - 1, 0),
+                    slot_type="THEORY",
+                )
+            )
+            slot_id += 1
+
+    subjects = [
+        SubjectRequirement(
+            subject_id=501,
+            subject_code="PHY101",
+            subject_name="Engineering Physics",
+            subject_type="THEORY",
+            weekly_hours=4,
+            eligible_faculty_ids=[10, 11],
+            stream_id=1,
+            cycle_group="PHYSICS_CYCLE",
+        ),
+        SubjectRequirement(
+            subject_id=502,
+            subject_code="CHE101",
+            subject_name="Engineering Chemistry",
+            subject_type="THEORY",
+            weekly_hours=4,
+            eligible_faculty_ids=[12, 13],
+            stream_id=1,
+            cycle_group="CHEMISTRY_CYCLE",
+        ),
+    ]
+
+    return SchedulingInput(
+        academic_year_id=1,
+        semester_ids=[1, 2],
+        is_joint_first_year=True,
+        rooms=rooms,
+        labs=labs,
+        sections=sections,
+        batches=batches,
+        time_slots=time_slots,
+        subjects=subjects,
+        max_solver_time_seconds=10,
+        max_workers=2,
+    )
+

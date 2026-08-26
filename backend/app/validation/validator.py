@@ -54,6 +54,10 @@ class IndependentTimetableValidator:
             # 9. Resource Availability Check
             self._check_resource_availability(errors)
 
+            # 10. First-Year Paired Slot Check
+            if self.input.is_joint_first_year:
+                self._check_first_year_paired_slots(errors)
+
         hard_count = sum(1 for e in errors if e.severity == "ERROR")
         soft_count = sum(1 for e in errors if e.severity == "WARNING")
 
@@ -64,6 +68,36 @@ class IndependentTimetableValidator:
             errors=errors,
             summary={"total_sessions_checked": len(self.sessions)},
         )
+
+    def _check_first_year_paired_slots(self, errors: List[ValidationError]) -> None:
+        """Validates that paired Physics and Chemistry cycle sections share identical slot indices."""
+        if not self.input:
+            return
+
+        subj_map = {s.subject_id: s for s in self.input.subjects}
+        sec_map = {s.id: s for s in self.input.sections}
+
+        # Group sessions by stream and slot
+        stream_slot_cycles: Dict[tuple, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+        for s in self.sessions:
+            sec = sec_map.get(s.section_id)
+            subj = subj_map.get(s.subject_id)
+            if sec and sec.stream_id and sec.cycle_group and subj and subj.cycle_group:
+                stream_slot_cycles[(sec.stream_id, s.time_slot_id)][subj.cycle_group] += 1
+
+        for (stream_id, slot_id), cycle_counts in stream_slot_cycles.items():
+            phy_count = cycle_counts.get("PHYSICS_CYCLE", 0)
+            chem_count = cycle_counts.get("CHEMISTRY_CYCLE", 0)
+            if phy_count != chem_count:
+                errors.append(
+                    ValidationError(
+                        rule_code="PAIRED_SLOT_MISMATCH",
+                        severity="ERROR",
+                        message=f"Stream ID {stream_id} at TimeSlot {slot_id} has unequal cycle classes: Physics={phy_count}, Chemistry={chem_count}.",
+                        time_slot_id=slot_id,
+                        conflicting_resource_id=stream_id,
+                    )
+                )
 
     def _check_faculty_clashes(self, errors: List[ValidationError]) -> None:
         fac_slot_map: Dict[tuple, List[TimetableSessionContract]] = defaultdict(list)
@@ -207,7 +241,6 @@ class IndependentTimetableValidator:
     def _check_subject_weekly_hours(self, errors: List[ValidationError]) -> None:
         if not self.input:
             return
-        subj_map = {sub.subject_id: sub for sub in self.input.subjects}
         sec_subj_counts: Dict[tuple, int] = defaultdict(int)
 
         for s in self.sessions:
@@ -215,6 +248,10 @@ class IndependentTimetableValidator:
 
         for sec in self.input.sections:
             for subj in self.input.subjects:
+                if subj.stream_id and sec.stream_id and subj.stream_id != sec.stream_id:
+                    continue
+                if subj.cycle_group and sec.cycle_group and subj.cycle_group != sec.cycle_group:
+                    continue
                 count = sec_subj_counts[(sec.id, subj.subject_id)]
                 if count != subj.weekly_hours:
                     errors.append(

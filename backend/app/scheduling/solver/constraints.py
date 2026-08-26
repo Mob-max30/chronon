@@ -29,6 +29,53 @@ class HardConstraintBuilder:
         self._apply_lab_clash()
         self._apply_capacity_constraints()
         self._apply_resource_unavailability()
+        if self.input.is_joint_first_year:
+            self._apply_first_year_paired_slots()
+            self._apply_cross_stream_shared_labs()
+
+    def _apply_first_year_paired_slots(self) -> None:
+        """Requirement: First-Year paired Physics & Chemistry cycle sections must share matching slot indices."""
+        slot_ids = [s.id for s in self.input.time_slots]
+
+        # Group sections by stream
+        stream_sec_map: Dict[int, Dict[str, List[int]]] = defaultdict(lambda: defaultdict(list))
+        for sec in self.input.sections:
+            if sec.stream_id and sec.cycle_group:
+                stream_sec_map[sec.stream_id][sec.cycle_group].append(sec.id)
+
+        phy_subjects = [s.subject_id for s in self.input.subjects if s.cycle_group == "PHYSICS_CYCLE"]
+        chem_subjects = [s.subject_id for s in self.input.subjects if s.cycle_group == "CHEMISTRY_CYCLE"]
+
+        for stream_id, cycle_map in stream_sec_map.items():
+            phy_sec_ids = cycle_map.get("PHYSICS_CYCLE", [])
+            chem_sec_ids = cycle_map.get("CHEMISTRY_CYCLE", [])
+
+            if phy_sec_ids and chem_sec_ids and phy_subjects and chem_subjects:
+                for slot_id in slot_ids:
+                    phy_active_vars = [
+                        var for key, var in self.var_builder.theory_vars.items()
+                        if key[0] in phy_subjects and key[2] in phy_sec_ids and key[4] == slot_id
+                    ]
+                    chem_active_vars = [
+                        var for key, var in self.var_builder.theory_vars.items()
+                        if key[0] in chem_subjects and key[2] in chem_sec_ids and key[4] == slot_id
+                    ]
+
+                    phy_sum = sum(phy_active_vars) if phy_active_vars else 0
+                    chem_sum = sum(chem_active_vars) if chem_active_vars else 0
+                    self.model.Add(phy_sum == chem_sum)
+
+    def _apply_cross_stream_shared_labs(self) -> None:
+        """Prevents physical lab collisions across different first-year streams."""
+        lab_slot_vars: Dict[tuple, List[cp_model.IntVar]] = defaultdict(list)
+        for key, var in self.var_builder.lab_vars.items():
+            lab_id = key[4]
+            slot_id = key[5]
+            lab_slot_vars[(lab_id, slot_id)].append(var)
+
+        for (lab_id, slot_id), var_list in lab_slot_vars.items():
+            if len(var_list) > 1:
+                self.model.AddAtMostOne(var_list)
 
     def _apply_subject_session_requirements(self) -> None:
         """Requirement K: Every subject must meet its required weekly hours for each section/batch."""

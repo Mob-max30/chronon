@@ -27,6 +27,10 @@ class VariableBuilder:
                 # Create lab decision variables per batch
                 lab_id = subj.required_lab_id or (self.input.labs[0].id if self.input.labs else 1)
                 for sec in self.input.sections:
+                    if subj.stream_id and sec.stream_id and subj.stream_id != sec.stream_id:
+                        continue
+                    if subj.cycle_group and sec.cycle_group and subj.cycle_group != sec.cycle_group:
+                        continue
                     sec_batches = [b for b in self.input.batches if b.section_id == sec.id]
                     if not sec_batches:
                         continue
@@ -39,6 +43,10 @@ class VariableBuilder:
             else:
                 # Theory subject decision variables per section
                 for sec in self.input.sections:
+                    if subj.stream_id and sec.stream_id and subj.stream_id != sec.stream_id:
+                        continue
+                    if subj.cycle_group and sec.cycle_group and subj.cycle_group != sec.cycle_group:
+                        continue
                     # Filter rooms: either section's dedicated room or any available room
                     candidate_rooms = self.input.rooms
                     if sec.room_id and sec.room_id in room_map:
