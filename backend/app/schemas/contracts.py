@@ -27,12 +27,13 @@ class APIResponse(BaseModel):
 # 2. VALIDATION CONTRACTS (DECOUPLED FROM SOLVER)
 # ==============================================================================
 class ValidationError(BaseModel):
-    rule_code: str = Field(..., description="Unique error code (e.g. FACULTY_CLASH, ROOM_CLASH)")
+    rule_code: str = Field(..., description="Unique error code (e.g. FACULTY_CLASH, ROOM_CLASH, CAPACITY_EXCEEDED)")
     severity: str = Field("ERROR", description="'ERROR' (Hard Constraint) or 'WARNING' (Soft Constraint)")
     message: str
     session_ids: List[int] = Field(default_factory=list)
     conflicting_resource_id: Optional[int] = None
     time_slot_id: Optional[int] = None
+    details: Dict[str, Any] = Field(default_factory=dict)
 
 
 class ValidationResult(BaseModel):
@@ -69,6 +70,7 @@ class RoomContract(BaseModel):
     name: str
     capacity: int
     building: Optional[str] = None
+    is_available: bool = True
 
 
 class LabContract(BaseModel):
@@ -77,6 +79,7 @@ class LabContract(BaseModel):
     capacity: int  # Workstations count
     building: Optional[str] = None
     lab_type: str = "COMPUTER"
+    is_available: bool = True
 
 
 class SectionContract(BaseModel):
@@ -107,6 +110,13 @@ class TimeSlotContract(BaseModel):
 # ==============================================================================
 # 5. SCHEDULING INPUT CONTRACT (IMMUTABLE PAYLOAD GIVEN TO SOLVER)
 # ==============================================================================
+class FacultyAvailability(BaseModel):
+    faculty_id: int
+    name: str
+    unavailable_slot_ids: List[int] = Field(default_factory=list)
+    max_daily_hours: int = 6
+
+
 class SubjectRequirement(BaseModel):
     subject_id: int
     subject_code: str
@@ -115,6 +125,15 @@ class SubjectRequirement(BaseModel):
     weekly_hours: int
     eligible_faculty_ids: List[int]
     required_lab_id: Optional[int] = None
+    preferred_room_ids: List[int] = Field(default_factory=list)
+
+
+class ObjectiveWeights(BaseModel):
+    distribute_subject_days: int = 10
+    minimize_student_gaps: int = 5
+    minimize_faculty_gaps: int = 5
+    avoid_consecutive_classes: int = 3
+    balance_daily_workload: int = 4
 
 
 class SchedulingInput(BaseModel):
@@ -129,6 +148,8 @@ class SchedulingInput(BaseModel):
     batches: List[BatchContract]
     time_slots: List[TimeSlotContract]
     subjects: List[SubjectRequirement]
+    faculty_availability: List[FacultyAvailability] = Field(default_factory=list)
+    objective_weights: ObjectiveWeights = Field(default_factory=ObjectiveWeights)
     max_solver_time_seconds: int = 120
     max_workers: int = 8
 
@@ -158,6 +179,28 @@ class TimetableVersionContract(BaseModel):
     sessions: List[TimetableSessionContract] = Field(default_factory=list)
 
 
+class QualityScore(BaseModel):
+    overall_score: float
+    student_gap_score: float
+    faculty_gap_score: float
+    distribution_score: float
+    workload_balance_score: float
+    breakdown: Dict[str, Any] = Field(default_factory=dict)
+
+
+class SchedulingResult(BaseModel):
+    status: str  # OPTIMAL, FEASIBLE, INFEASIBLE, TIMEOUT, FAILED
+    is_valid: bool
+    is_optimal: bool
+    sessions: List[TimetableSessionContract] = Field(default_factory=list)
+    validation: ValidationResult
+    conflicts: List[ValidationError] = Field(default_factory=list)
+    quality: Optional[QualityScore] = None
+    solver_stats: Dict[str, Any] = Field(default_factory=dict)
+    execution_time_seconds: float
+    message: str
+
+
 class GenerationRunContract(BaseModel):
     id: int
     timetable_id: int
@@ -166,3 +209,4 @@ class GenerationRunContract(BaseModel):
     solver_time_seconds: Optional[float] = None
     conflict_summary: Optional[Dict[str, Any]] = None
     created_at: datetime
+
