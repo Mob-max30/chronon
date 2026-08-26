@@ -125,6 +125,10 @@ export function TimetableMatrixGrid() {
     window.open(`http://localhost:8000/api/v1/timetables/1/export?export_format=csv&view_type=${viewType}`, "_blank");
   };
 
+  const handleExportJSON = () => {
+    window.open(`http://localhost:8000/api/v1/timetables/1/export?export_format=json&view_type=${viewType}`, "_blank");
+  };
+
   const getActiveFilterLabel = () => {
     if (viewType === "SECTION") return `Section: ${selectedSection}`;
     if (viewType === "FACULTY") {
@@ -194,6 +198,12 @@ export function TimetableMatrixGrid() {
               </div>
 
               <div className="flex items-center gap-3">
+                <button
+                  onClick={handleExportJSON}
+                  className="px-3.5 py-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition shadow-sm"
+                >
+                  <Download className="w-3.5 h-3.5 text-indigo-400" /> Export JSON
+                </button>
                 <button
                   onClick={handleExportCSV}
                   className="px-3.5 py-2 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition shadow-sm"

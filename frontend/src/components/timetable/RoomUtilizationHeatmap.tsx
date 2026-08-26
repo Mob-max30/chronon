@@ -90,6 +90,39 @@ export function RoomUtilizationHeatmap() {
     }
   };
 
+  const exportHeatmapCSV = () => {
+    const dayObj = days.find((d) => d.id === selectedDay);
+    const dayName = dayObj ? dayObj.name : `Day_${selectedDay}`;
+    let csv = `Infrastructure Occupancy Heatmap - ${dayName}\nFacility,Capacity,Building,${periods.map((p) => `"${p.label} (${p.time})"`).join(",")}\n`;
+
+    rooms.forEach((r) => {
+      const row = [`"${r.name}"`, r.capacity, `"${r.building || 'Main Block'}"`];
+      periods.forEach((p) => {
+        const alloc = getCellAllocation("ROOM", r.id, p.period_index);
+        row.push(alloc.occupied ? `"${alloc.subject} - ${alloc.section} (${alloc.faculty})"` : `"FREE"`);
+      });
+      csv += row.join(",") + "\n";
+    });
+
+    labs.forEach((l) => {
+      const row = [`"${l.name}"`, l.capacity, `"${l.building || 'Lab Wing'}"`];
+      periods.forEach((p) => {
+        const alloc = getCellAllocation("LAB", l.id, p.period_index);
+        row.push(alloc.occupied ? `"${alloc.subject} - ${alloc.section} (${alloc.faculty})"` : `"FREE"`);
+      });
+      csv += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `infrastructure_occupancy_${dayName.toLowerCase()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Controls & Day Selector */}
@@ -103,21 +136,30 @@ export function RoomUtilizationHeatmap() {
           </p>
         </div>
 
-        {/* Day Buttons */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-950/80 rounded-xl border border-slate-800 text-xs font-semibold">
-          {days.map((d) => (
-            <button
-              key={d.id}
-              onClick={() => setSelectedDay(d.id)}
-              className={`px-3 py-1.5 rounded-lg transition ${
-                selectedDay === d.id
-                  ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/25"
-                  : "text-slate-400 hover:text-slate-200"
-              }`}
-            >
-              {d.name}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={exportHeatmapCSV}
+            className="px-3.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition shadow-sm"
+          >
+            Export Heatmap CSV
+          </button>
+
+          {/* Day Buttons */}
+          <div className="flex items-center gap-1.5 p-1 bg-slate-950/80 rounded-xl border border-slate-800 text-xs font-semibold">
+            {days.map((d) => (
+              <button
+                key={d.id}
+                onClick={() => setSelectedDay(d.id)}
+                className={`px-3 py-1.5 rounded-lg transition ${
+                  selectedDay === d.id
+                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/25"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                {d.name}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
