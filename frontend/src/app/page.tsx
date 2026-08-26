@@ -12,6 +12,7 @@ import {
   Database,
   Users,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function HomePage() {
   return (
@@ -25,8 +26,8 @@ export default function HomePage() {
           <div className="relative z-10 max-w-3xl space-y-6">
             <div className="flex flex-wrap items-center gap-3">
               <HealthBadge />
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-xs font-semibold">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400" /> Milestone 0 Initialized
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold">
+                <Sparkles className="w-3.5 h-3.5 text-blue-400" /> Pranav M1 Scope Active
               </div>
             </div>
 
@@ -39,12 +40,18 @@ export default function HomePage() {
             </p>
 
             <div className="pt-2 flex flex-wrap gap-4">
-              <button className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm flex items-center gap-2 shadow-lg shadow-blue-600/25 transition">
-                <Calendar className="w-4 h-4" /> Start New Timetable Generation <ArrowRight className="w-4 h-4" />
-              </button>
-              <button className="px-6 py-3 rounded-xl border border-slate-700 hover:border-slate-600 bg-slate-800/50 hover:bg-slate-800 text-slate-200 font-medium text-sm transition">
-                View Past Versions
-              </button>
+              <Link
+                href="/academic-year"
+                className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm flex items-center gap-2 shadow-lg shadow-blue-600/25 transition"
+              >
+                <Calendar className="w-4 h-4" /> Start Academic Lifecycle <ArrowRight className="w-4 h-4" />
+              </Link>
+              <Link
+                href="/versions"
+                className="px-6 py-3 rounded-xl border border-slate-700 hover:border-slate-600 bg-slate-800/50 hover:bg-slate-800 text-slate-200 font-medium text-sm transition"
+              >
+                View Version Snapshots
+              </Link>
             </div>
           </div>
         </section>
@@ -68,30 +75,30 @@ export default function HomePage() {
               <p className="text-xs text-slate-400">4-Way balanced parallel architecture</p>
             </div>
             <span className="text-xs text-slate-500 font-mono flex items-center gap-1">
-              <GitBranch className="w-3.5 h-3.5 text-blue-400" /> dev branch
+              <GitBranch className="w-3.5 h-3.5 text-blue-400" /> pranav branch
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Pranav */}
-            <div className="p-5 rounded-2xl border border-blue-900/40 bg-slate-900/60 flex flex-col justify-between space-y-4">
+            <div className="p-5 rounded-2xl border border-blue-500/60 bg-blue-950/20 flex flex-col justify-between space-y-4 shadow-lg shadow-blue-900/20">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-md border border-blue-500/20 font-mono">
-                    pranav
+                  <span className="text-xs font-bold text-blue-300 bg-blue-500/20 px-2.5 py-1 rounded-md border border-blue-500/30 font-mono">
+                    pranav (active)
                   </span>
                   <Layers className="w-4 h-4 text-blue-400" />
                 </div>
-                <h3 className="font-bold text-slate-100">Pranav (Lead)</h3>
-                <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+                <h3 className="font-bold text-white">Pranav (Lead)</h3>
+                <p className="text-xs text-slate-300 mt-2 leading-relaxed">
                   Academic lifecycle, Generation orchestration (<code className="text-blue-300">GenerationRun</code>), Timetable versioning (<code className="text-blue-300">TimetableVersion</code>), state machine.
                 </p>
               </div>
-              <div className="text-[11px] text-slate-500 font-medium">Domain: Lifecycle & Orchestration</div>
+              <div className="text-[11px] text-blue-400 font-medium">Lifecycle & Orchestration M1 Implemented</div>
             </div>
 
             {/* Ujwal */}
-            <div className="p-5 rounded-2xl border border-emerald-900/40 bg-slate-900/60 flex flex-col justify-between space-y-4">
+            <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 flex flex-col justify-between space-y-4 opacity-75">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20 font-mono">
@@ -108,7 +115,7 @@ export default function HomePage() {
             </div>
 
             {/* Pruthvik */}
-            <div className="p-5 rounded-2xl border border-purple-900/40 bg-slate-900/60 flex flex-col justify-between space-y-4">
+            <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 flex flex-col justify-between space-y-4 opacity-75">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-purple-400 bg-purple-500/10 px-2.5 py-1 rounded-md border border-purple-500/20 font-mono">
@@ -125,7 +132,7 @@ export default function HomePage() {
             </div>
 
             {/* Nivish */}
-            <div className="p-5 rounded-2xl border border-amber-900/40 bg-slate-900/60 flex flex-col justify-between space-y-4">
+            <div className="p-5 rounded-2xl border border-slate-800 bg-slate-900/60 flex flex-col justify-between space-y-4 opacity-75">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-md border border-amber-500/20 font-mono">

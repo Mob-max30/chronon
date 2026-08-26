@@ -1,6 +1,7 @@
+from datetime import datetime
 import enum
 from typing import List, Optional, Any, Dict
-from sqlalchemy import String, Integer, Boolean, Enum, ForeignKey, Float, JSON
+from sqlalchemy import String, Integer, Boolean, Enum, ForeignKey, Float, JSON, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base
 
@@ -12,11 +13,13 @@ class TimetableStatus(str, enum.Enum):
 
 
 class GenerationStatus(str, enum.Enum):
-    PENDING = "PENDING"
+    QUEUED = "QUEUED"
     RUNNING = "RUNNING"
     SUCCESS = "SUCCESS"
     FAILED = "FAILED"
     INFEASIBLE = "INFEASIBLE"
+    TIMEOUT = "TIMEOUT"
+    CANCELLED = "CANCELLED"
 
 
 class Timetable(Base):
@@ -70,9 +73,12 @@ class GenerationRun(Base):
     timetable_id: Mapped[int] = mapped_column(ForeignKey("timetables.id"), nullable=False)
     triggered_by: Mapped[str] = mapped_column(String(100), default="system", nullable=False)
     status: Mapped[GenerationStatus] = mapped_column(
-        Enum(GenerationStatus), default=GenerationStatus.PENDING, nullable=False
+        Enum(GenerationStatus), default=GenerationStatus.QUEUED, nullable=False
     )
     solver_time_seconds: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    quality_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     conflict_summary: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
 
     timetable: Mapped["Timetable"] = relationship("Timetable", back_populates="generation_runs")

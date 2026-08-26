@@ -59,6 +59,10 @@ class ChrononCPSATSolver:
                 if vars_for_section:
                     self.model.AddAtMostOne(vars_for_section)
 
+        # Basic Objective: Maximize total scheduled subject sessions
+        if self.decision_vars:
+            self.model.Maximize(sum(self.decision_vars.values()))
+
     def solve(self) -> Tuple[str, float, List[TimetableSessionContract]]:
         """
         Executes CP-SAT search and returns status, solve duration, and scheduled sessions.
