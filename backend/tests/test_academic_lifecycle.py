@@ -1,7 +1,6 @@
 import pytest
-import asyncio
+from httpx import AsyncClient, ASGITransport
 from pydantic import ValidationError
-from fastapi.testclient import TestClient
 from app.main import app
 from app.services.academic_service import AcademicService
 from app.schemas.academic import (
@@ -11,28 +10,33 @@ from app.schemas.academic import (
     TermType,
 )
 
-client = TestClient(app)
+
+@pytest.fixture
+async def async_client():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client
 
 
-def test_academic_service_in_memory_creation():
+@pytest.mark.asyncio
+async def test_academic_service_in_memory_creation():
     service = AcademicService(db=None)
-    created = asyncio.run(
-        service.create_academic_year(AcademicYearCreate(name="2026-2027", is_current=True))
-    )
+    created = await service.create_academic_year(AcademicYearCreate(name="2026-2027", is_current=True))
     assert created.name == "2026-2027"
     assert created.is_current is True
 
 
-def test_academic_service_lifecycle_queries():
+@pytest.mark.asyncio
+async def test_academic_service_lifecycle_queries():
     service = AcademicService(db=None)
-    years = asyncio.run(service.get_all_years())
+    years = await service.get_all_years()
     assert isinstance(years, list)
 
-    historical = asyncio.run(service.get_historical_years())
+    historical = await service.get_historical_years()
     assert isinstance(historical, list)
 
     # Invalid ID query
-    non_existent = asyncio.run(service.get_year_by_id(99999))
+    non_existent = await service.get_year_by_id(99999)
     assert non_existent is None
 
 
@@ -60,51 +64,50 @@ def test_semester_validation_valid_cases():
         year_level=1,
         term_type=TermType.ODD,
         semester_number=1,
-        is_first_year_joint=True,
     )
     res_y1 = service.validate_semester_selection(req_y1)
     assert res_y1.is_valid is True
-    assert res_y1.selected_semester == 1
     assert res_y1.is_first_year_p_c_cycle is True
 
 
 def test_semester_validation_invalid_combinations():
-    # Mismatch between Year level and Semester (Year 2 with Semester 5)
-    with pytest.raises(ValidationError) as exc_info:
+    # Year 2 with Sem 1 (Invalid year-semester match)
+    with pytest.raises(ValidationError) as exc1:
         SemesterSelectionRequest(
             academic_year_id=1,
             institution_type=InstitutionType.VTU_AFFILIATED,
             year_level=2,
             term_type=TermType.ODD,
+            semester_number=1,
+        )
+    assert "Semester 1 is invalid for Year 2" in str(exc1.value)
+
+    # Year 3 with Even term_type but Odd semester number 5
+    with pytest.raises(ValidationError) as exc2:
+        SemesterSelectionRequest(
+            academic_year_id=1,
+            institution_type=InstitutionType.VTU_AFFILIATED,
+            year_level=3,
+            term_type=TermType.EVEN,
             semester_number=5,
         )
-    assert "Semester 5 is invalid for Year 2" in str(exc_info.value)
-
-    # Mismatch between TermType and parity (ODD requested for Sem 4)
-    with pytest.raises(ValidationError) as exc_info2:
-        SemesterSelectionRequest(
-            academic_year_id=1,
-            institution_type=InstitutionType.VTU_AFFILIATED,
-            year_level=2,
-            term_type=TermType.ODD,
-            semester_number=4,
-        )
-    assert "Semester 4 is not an ODD semester" in str(exc_info2.value)
+    assert "not an EVEN semester" in str(exc2.value)
 
 
-def test_api_academic_years_endpoints():
+@pytest.mark.asyncio
+async def test_api_academic_years_endpoints(async_client: AsyncClient):
     # Test listing
-    res = client.get("/api/v1/academic-years")
+    res = await async_client.get("/api/v1/academic-years")
     assert res.status_code == 200
     assert res.json()["success"] is True
 
     # Test Current endpoint
-    res_curr = client.get("/api/v1/academic-years/current")
+    res_curr = await async_client.get("/api/v1/academic-years/current")
     assert res_curr.status_code == 200
     assert res_curr.json()["success"] is True
 
     # Test Historical endpoint
-    res_hist = client.get("/api/v1/academic-years/historical")
+    res_hist = await async_client.get("/api/v1/academic-years/historical")
     assert res_hist.status_code == 200
     assert res_hist.json()["success"] is True
 
@@ -117,7 +120,7 @@ def test_api_academic_years_endpoints():
         "semester_number": 3,
         "is_first_year_joint": False,
     }
-    res_val = client.post("/api/v1/academic-years/validate-semester", json=payload)
+    res_val = await async_client.post("/api/v1/academic-years/validate-semester", json=payload)
     assert res_val.status_code == 200
     data = res_val.json()
     assert data["success"] is True

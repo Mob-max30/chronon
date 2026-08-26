@@ -31,38 +31,31 @@ from app.schemas.academic import (
 )
 from app.services.academic_service import AcademicService
 
-# In-memory SQLite async DB for fast testing
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+from tests.conftest import TestingSessionLocal, test_engine
 
 
 @pytest_asyncio.fixture
 async def test_db_session():
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-    async with engine.begin() as conn:
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-
-    session_factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
-    async with session_factory() as session:
+    async with TestingSessionLocal() as session:
         # Seed basic institution, scheme, semester
-        inst = Institution(name="VTU Autonomous Test College", code="VTU-TEST", type=InstitutionType.VTU_AFFILIATED)
+        inst = Institution(id=1, name="VTU Autonomous Test College", code="VTU-TEST", type=InstitutionType.VTU_AFFILIATED)
         session.add(inst)
         await session.flush()
 
-        scheme = Scheme(institution_id=inst.id, name="2022 Scheme", year=2022)
+        scheme = Scheme(id=1, institution_id=inst.id, name="2022 Scheme", year=2022)
         session.add(scheme)
         await session.flush()
 
-        sem1 = Semester(scheme_id=scheme.id, number=1, term_type=TermType.ODD)
-        sem2 = Semester(scheme_id=scheme.id, number=2, term_type=TermType.EVEN)
-        sem3 = Semester(scheme_id=scheme.id, number=3, term_type=TermType.ODD)
+        sem1 = Semester(id=1, scheme_id=scheme.id, number=1, term_type=TermType.ODD)
+        sem2 = Semester(id=2, scheme_id=scheme.id, number=2, term_type=TermType.EVEN)
+        sem3 = Semester(id=3, scheme_id=scheme.id, number=3, term_type=TermType.ODD)
         session.add_all([sem1, sem2, sem3])
         await session.commit()
 
         yield session
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await engine.dispose()
 
 
 @pytest.mark.asyncio
@@ -348,5 +341,3 @@ async def test_academic_api_endpoints(test_db_session: AsyncSession):
         res = await client.get("/api/v1/faculty")
         assert res.status_code == 200
         assert len(res.json()["data"]) >= 1
-
-    app.dependency_overrides.clear()

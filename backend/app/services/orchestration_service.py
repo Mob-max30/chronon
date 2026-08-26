@@ -153,10 +153,15 @@ class OrchestrationService:
             # Step 3: Invoke Deterministic CP-SAT Solver via Generator Abstraction
             start_time = time.time()
             if request.is_joint_first_year:
-                solver_status, duration, sessions = generate_joint(scheduling_input, scheduling_input)
+                sched_res = generate_joint(scheduling_input, scheduling_input)
             else:
-                solver_status, duration, sessions = generate_single(scheduling_input)
+                sched_res = generate_single(scheduling_input)
             elapsed = time.time() - start_time
+
+            solver_status = sched_res.status
+            duration = sched_res.execution_time_seconds
+            sessions = sched_res.sessions
+            validation_result = sched_res.validation
 
             # Check timeout condition
             if elapsed > request.max_solver_time_seconds or solver_status == "TIMEOUT":
@@ -175,12 +180,8 @@ class OrchestrationService:
                     "error": "INFEASIBLE_CONSTRAINTS",
                     "details": "The constraint set has no mathematically feasible solution.",
                 }
-            elif solver_status == "SUCCESS":
-                # Step 4: Invoke Independent Decoupled Validator
-                validator = IndependentTimetableValidator(sessions)
-                validation_result = validator.validate()
-
-                if validation_result.is_valid:
+            elif solver_status in ("SUCCESS", "OPTIMAL", "FEASIBLE"):
+                if validation_result and validation_result.is_valid:
                     # Step 5: Persist immutable TimetableVersion snapshot
                     created_version = await self.versioning_service.create_new_version(
                         timetable_id=request.timetable_id,
@@ -191,7 +192,7 @@ class OrchestrationService:
                     run.status = GenerationStatus.SUCCESS
                     run.solver_time_seconds = round(duration or elapsed, 4)
                     run.completed_at = datetime.utcnow()
-                    run.quality_score = 100.0 - float(validation_result.total_soft_violations * 2)
+                    run.quality_score = sched_res.quality.overall_score if sched_res.quality else 100.0
                     run.conflict_summary = {
                         "validation": "PASSED",
                         "total_sessions": len(sessions),
@@ -199,14 +200,13 @@ class OrchestrationService:
                         "quality_score": run.quality_score,
                     }
                 else:
-                    # Validation Failed
                     run.status = GenerationStatus.FAILED
                     run.solver_time_seconds = round(duration or elapsed, 4)
                     run.completed_at = datetime.utcnow()
                     run.conflict_summary = {
                         "error": "VALIDATION_FAILED",
-                        "details": f"Independent validator detected {validation_result.total_hard_violations} hard clashes.",
-                        "validation_errors": [e.model_dump() for e in validation_result.errors],
+                        "details": "Validator detected hard constraint clashes.",
+                        "errors": [err.model_dump() for err in validation_result.errors] if validation_result else [],
                     }
             else:
                 run.status = GenerationStatus.FAILED

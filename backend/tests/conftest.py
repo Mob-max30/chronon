@@ -12,6 +12,7 @@ from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import StaticPool
 
+import app.models  # noqa: F401
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
@@ -38,14 +39,10 @@ TestingSessionLocal = async_sessionmaker(
 
 @pytest.fixture(autouse=True)
 async def init_test_database():
-    """Create all tables before each test and drop them after."""
-    # Import all models to register with Base.metadata
-    import app.models  # noqa: F401
+    """Ensure clean schema before each test."""
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
 
 
 async def override_get_db():

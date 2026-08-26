@@ -1,4 +1,4 @@
-import asyncio
+import pytest
 from datetime import datetime
 from app.services.orchestration_service import OrchestrationService
 from app.schemas.timetable import GenerationTriggerRequest
@@ -11,10 +11,11 @@ from app.schemas.contracts import (
     RoomContract,
     TimetableSessionContract,
 )
-from app.scheduling.fixtures import get_sample_scheduling_input
+from app.scheduling.fixtures import get_sample_scheduling_input, get_infeasible_fixture
 
 
-def test_orchestration_service_success_flow():
+@pytest.mark.asyncio
+async def test_orchestration_service_success_flow():
     service = OrchestrationService(db=None)
     request = GenerationTriggerRequest(
         timetable_id=1,
@@ -25,9 +26,7 @@ def test_orchestration_service_success_flow():
         notes="Automated test generation",
     )
 
-    result = asyncio.run(
-        service.orchestrate_generation(request, custom_input=get_sample_scheduling_input())
-    )
+    result = await service.orchestrate_generation(request, custom_input=get_sample_scheduling_input())
 
     assert result.generation_run.status == GenerationStatus.SUCCESS
     assert result.generation_run.timetable_id == 1
@@ -38,7 +37,8 @@ def test_orchestration_service_success_flow():
     assert result.generation_run.quality_score is not None
 
 
-def test_orchestration_service_infeasible_flow():
+@pytest.mark.asyncio
+async def test_orchestration_service_infeasible_flow():
     service = OrchestrationService(db=None)
     request = GenerationTriggerRequest(
         timetable_id=1,
@@ -47,26 +47,15 @@ def test_orchestration_service_infeasible_flow():
         is_joint_first_year=False,
     )
 
-    infeasible_input = SchedulingInput(
-        academic_year_id=1,
-        semester_ids=[3],
-        is_joint_first_year=False,
-        rooms=[],
-        labs=[],
-        sections=[],
-        batches=[],
-        time_slots=[],
-        subjects=[],
-    )
+    infeasible_input = get_infeasible_fixture()
 
-    result = asyncio.run(
-        service.orchestrate_generation(request, custom_input=infeasible_input)
-    )
+    result = await service.orchestrate_generation(request, custom_input=infeasible_input)
 
-    assert result.generation_run.status in [GenerationStatus.SUCCESS, GenerationStatus.INFEASIBLE]
+    assert result.generation_run.status in [GenerationStatus.INFEASIBLE, GenerationStatus.FAILED]
 
 
-def test_orchestration_service_timeout_handling():
+@pytest.mark.asyncio
+async def test_orchestration_service_timeout_handling():
     service = OrchestrationService(db=None)
     request = GenerationTriggerRequest(
         timetable_id=1,
@@ -75,21 +64,21 @@ def test_orchestration_service_timeout_handling():
         max_solver_time_seconds=0,  # 0s forces immediate timeout check
     )
 
-    result = asyncio.run(
-        service.orchestrate_generation(request, custom_input=get_sample_scheduling_input())
-    )
+    result = await service.orchestrate_generation(request, custom_input=get_sample_scheduling_input())
 
     assert result.generation_run.status == GenerationStatus.TIMEOUT
     assert result.generation_run.conflict_summary["error"] == "SOLVER_TIMEOUT"
 
 
-def test_orchestration_cancellation_flow():
+@pytest.mark.asyncio
+async def test_orchestration_cancellation_flow():
     service = OrchestrationService(db=None)
-    cancelled = asyncio.run(service.cancel_generation_run(9999))
+    cancelled = await service.cancel_generation_run(9999)
     assert cancelled is None
 
 
-def test_orchestration_structured_error_no_leaks():
+@pytest.mark.asyncio
+async def test_orchestration_structured_error_no_leaks():
     service = OrchestrationService(db=None)
     request = GenerationTriggerRequest(
         timetable_id=1,
@@ -100,9 +89,7 @@ def test_orchestration_structured_error_no_leaks():
     class BrokenInput:
         pass
 
-    result = asyncio.run(
-        service.orchestrate_generation(request, custom_input=BrokenInput())  # type: ignore
-    )
+    result = await service.orchestrate_generation(request, custom_input=BrokenInput())  # type: ignore
 
     assert result.generation_run.status == GenerationStatus.FAILED
     assert "EXECUTION_EXCEPTION" in result.generation_run.conflict_summary["error"]
