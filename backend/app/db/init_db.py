@@ -29,6 +29,7 @@ from app.models.resources import (
     TimeSlot,
     SlotType,
 )
+from app.models.timetable import Timetable, GenerationRun, TimetableVersion
 
 logger = logging.getLogger("chronon.init_db")
 
@@ -206,6 +207,15 @@ async def init_db():
                     )
                     slots.append(ts)
             session.add_all(slots)
+
+            # 12. Default Timetable
+            tt = Timetable(
+                id=1,
+                academic_year_id=ay.id,
+                name="Baseline VTU Engineering Timetable 2026-2027",
+                status="DRAFT",
+            )
+            session.add(tt)
 
             await session.commit()
             print("Database baseline seeded successfully.")

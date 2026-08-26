@@ -14,6 +14,12 @@ def get_engine():
         if "postgresql" in db_url:
             try:
                 import asyncpg  # noqa
+                # Test connection or fallback
+                import socket
+                s = socket.socket()
+                s.settimeout(0.5)
+                s.connect(("127.0.0.1", 5432))
+                s.close()
                 _engine = create_async_engine(
                     db_url,
                     echo=settings.DEBUG,
@@ -31,7 +37,7 @@ def get_engine():
                     echo=False,
                     future=True,
                 )
-            except ImportError:
+            except Exception:
                 _engine = None
     return _engine
 

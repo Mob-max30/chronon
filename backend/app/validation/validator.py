@@ -242,9 +242,13 @@ class IndependentTimetableValidator:
         if not self.input:
             return
         sec_subj_counts: Dict[tuple, int] = defaultdict(int)
+        batch_subj_counts: Dict[tuple, int] = defaultdict(int)
 
         for s in self.sessions:
-            sec_subj_counts[(s.section_id, s.subject_id)] += 1
+            if s.batch_id is not None:
+                batch_subj_counts[(s.batch_id, s.subject_id)] += 1
+            else:
+                sec_subj_counts[(s.section_id, s.subject_id)] += 1
 
         for sec in self.input.sections:
             for subj in self.input.subjects:
@@ -252,17 +256,33 @@ class IndependentTimetableValidator:
                     continue
                 if subj.cycle_group and sec.cycle_group and subj.cycle_group != sec.cycle_group:
                     continue
-                count = sec_subj_counts[(sec.id, subj.subject_id)]
-                if count != subj.weekly_hours:
-                    errors.append(
-                        ValidationError(
-                            rule_code="MISSING_SESSION",
-                            severity="ERROR",
-                            message=f"Section ID {sec.id} has {count} sessions scheduled for Subject ID {subj.subject_id}, but {subj.weekly_hours} were required.",
-                            session_ids=[],
-                            conflicting_resource_id=subj.subject_id,
+
+                if subj.subject_type == "LAB":
+                    sec_batches = [b for b in self.input.batches if b.section_id == sec.id]
+                    for batch in sec_batches:
+                        count = batch_subj_counts[(batch.id, subj.subject_id)]
+                        if count != subj.weekly_hours:
+                            errors.append(
+                                ValidationError(
+                                    rule_code="MISSING_SESSION",
+                                    severity="ERROR",
+                                    message=f"Batch ID {batch.id} has {count} sessions scheduled for Subject ID {subj.subject_id}, but {subj.weekly_hours} were required.",
+                                    session_ids=[],
+                                    conflicting_resource_id=subj.subject_id,
+                                )
+                            )
+                else:
+                    count = sec_subj_counts[(sec.id, subj.subject_id)]
+                    if count != subj.weekly_hours:
+                        errors.append(
+                            ValidationError(
+                                rule_code="MISSING_SESSION",
+                                severity="ERROR",
+                                message=f"Section ID {sec.id} has {count} sessions scheduled for Subject ID {subj.subject_id}, but {subj.weekly_hours} were required.",
+                                session_ids=[],
+                                conflicting_resource_id=subj.subject_id,
+                            )
                         )
-                    )
 
     def _check_resource_availability(self, errors: List[ValidationError]) -> None:
         if not self.input:
