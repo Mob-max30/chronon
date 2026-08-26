@@ -39,12 +39,18 @@ export default function HomePage() {
             </p>
 
             <div className="pt-2 flex flex-wrap gap-4">
-              <button className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm flex items-center gap-2 shadow-lg shadow-blue-600/25 transition">
-                <Calendar className="w-4 h-4" /> Start New Timetable Generation <ArrowRight className="w-4 h-4" />
-              </button>
-              <button className="px-6 py-3 rounded-xl border border-slate-700 hover:border-slate-600 bg-slate-800/50 hover:bg-slate-800 text-slate-200 font-medium text-sm transition">
-                View Past Versions
-              </button>
+              <a
+                href="/resources"
+                className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm flex items-center gap-2 shadow-lg shadow-blue-600/25 transition"
+              >
+                <Calendar className="w-4 h-4" /> Physical Resources & Calculation Hub <ArrowRight className="w-4 h-4" />
+              </a>
+              <a
+                href="/timetables"
+                className="px-6 py-3 rounded-xl border border-slate-700 hover:border-slate-600 bg-slate-800/50 hover:bg-slate-800 text-slate-200 font-medium text-sm transition flex items-center gap-2"
+              >
+                View Generated Timetable Matrix
+              </a>
             </div>
           </div>
         </section>

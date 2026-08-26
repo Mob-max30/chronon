@@ -14,10 +14,13 @@ from app.models.academic import (
 )
 from app.models.resources import (
     Room,
+    RoomAvailability,
     Lab,
+    LabAvailability,
     LabSubjectMapping,
     Section,
     Batch,
+    SlotConfig,
     TimeSlot,
     SlotType,
 )
@@ -49,10 +52,13 @@ __all__ = [
     "Faculty",
     "FacultySubject",
     "Room",
+    "RoomAvailability",
     "Lab",
+    "LabAvailability",
     "LabSubjectMapping",
     "Section",
     "Batch",
+    "SlotConfig",
     "TimeSlot",
     "SlotType",
     "Timetable",
