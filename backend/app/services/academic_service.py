@@ -1,7 +1,7 @@
 import math
 from typing import List, Optional, Dict, Any, Tuple
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.academic import (
@@ -40,21 +40,24 @@ from app.schemas.academic import (
 
 class AcademicService:
     """
-    Unified business service for Academic Information Management & Lifecycles:
-    - Academic Year lifecycle (Current, Historical, Activation)
-    - Year & Semester selection validation (odd/even, first-year joint cycles)
-    - Branch catalogue and student counts
-    - First-Year Stream grouping and student rollup
-    - Physics/Chemistry cycle-group cohort splitting
-    - Subject curriculum management and common-subject resolution
-    - Faculty roster and multi-stream subject assignments
+    Unified Academic Service for Chronon:
+    1. Academic Year Lifecycle (Pranav):
+       - Enforces single-active 'Current Year' invariant.
+       - Historical session management & promotion.
+       - Semester parity and year compatibility validation.
+    2. Curriculum & Catalog Management (Ujwal):
+       - Branch catalogue and student counts.
+       - First-Year Stream grouping and student rollup.
+       - Physics/Chemistry cycle-group cohort splitting.
+       - Subject curriculum management and common-subject resolution.
+       - Faculty roster and multi-stream subject assignments.
     """
 
     def __init__(self, db: Optional[AsyncSession] = None):
         self.db = db
 
     # =========================================================================
-    # 1. ACADEMIC YEAR LIFECYCLE & SEMESTER VALIDATION
+    # 1. ACADEMIC YEAR LIFECYCLE & VALIDATION (PRANAV)
     # =========================================================================
 
     async def get_all_years(self) -> List[AcademicYear]:
@@ -147,7 +150,7 @@ class AcademicService:
         )
 
     # =========================================================================
-    # 2. BRANCH & STUDENT COUNT OPERATIONS
+    # 2. BRANCH & STUDENT COUNT OPERATIONS (UJWAL)
     # =========================================================================
 
     @classmethod
@@ -213,7 +216,7 @@ class AcademicService:
         return updated_branches
 
     # =========================================================================
-    # 3. FIRST-YEAR STREAM & CYCLE GROUP ENGINE
+    # 3. FIRST-YEAR STREAM & CYCLE GROUP ENGINE (UJWAL)
     # =========================================================================
 
     @classmethod
@@ -313,19 +316,16 @@ class AcademicService:
             phy_count = math.ceil(total_students / 2)
             chem_count = total_students - phy_count
             note = f"Equally divided {total_students} students: {phy_count} Physics, {chem_count} Chemistry."
-
         elif method == "MANUAL":
             phy_count = req.physics_count or math.ceil(total_students / 2)
             chem_count = req.chemistry_count or (total_students - phy_count)
             note = f"Manual override applied: {phy_count} Physics, {chem_count} Chemistry."
-
         elif method == "CAPACITY":
             lab_cap = req.max_lab_capacity or 30
             batches = max(1, round((total_students / 2) / lab_cap))
             phy_count = min(total_students, batches * lab_cap)
             chem_count = max(0, total_students - phy_count)
             note = f"Capacity-aligned split with lab capacity {lab_cap}: {phy_count} Physics, {chem_count} Chemistry."
-
         else:
             phy_count = math.ceil(total_students / 2)
             chem_count = total_students - phy_count
@@ -346,7 +346,7 @@ class AcademicService:
         )
 
     # =========================================================================
-    # 4. SUBJECT MANAGEMENT
+    # 4. SUBJECT MANAGEMENT (UJWAL)
     # =========================================================================
 
     @classmethod
@@ -439,7 +439,7 @@ class AcademicService:
         return True
 
     # =========================================================================
-    # 5. FACULTY & SUBJECT MAPPING MANAGEMENT
+    # 5. FACULTY & SUBJECT MAPPING MANAGEMENT (UJWAL)
     # =========================================================================
 
     @classmethod

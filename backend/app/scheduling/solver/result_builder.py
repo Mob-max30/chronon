@@ -27,10 +27,12 @@ class ResultBuilder:
         """Extracts active sessions from solver variable assignments."""
         sessions: List[TimetableSessionContract] = []
         session_id_counter = 1
+        sec_map = {s.id: s for s in self.input.sections}
 
         for key, var in self.var_builder.theory_vars.items():
             if self.solver.Value(var) == 1:
                 subj_id, fac_id, sec_id, room_id, slot_id = key
+                sec = sec_map.get(sec_id)
                 sessions.append(
                     TimetableSessionContract(
                         id=session_id_counter,
@@ -42,6 +44,8 @@ class ResultBuilder:
                         room_id=room_id,
                         lab_id=None,
                         time_slot_id=slot_id,
+                        stream_id=sec.stream_id if sec else None,
+                        cycle_group=sec.cycle_group if sec else None,
                     )
                 )
                 session_id_counter += 1
@@ -49,6 +53,7 @@ class ResultBuilder:
         for key, var in self.var_builder.lab_vars.items():
             if self.solver.Value(var) == 1:
                 subj_id, fac_id, sec_id, batch_id, lab_id, slot_id = key
+                sec = sec_map.get(sec_id)
                 sessions.append(
                     TimetableSessionContract(
                         id=session_id_counter,
@@ -60,6 +65,8 @@ class ResultBuilder:
                         room_id=None,
                         lab_id=lab_id,
                         time_slot_id=slot_id,
+                        stream_id=sec.stream_id if sec else None,
+                        cycle_group=sec.cycle_group if sec else None,
                     )
                 )
                 session_id_counter += 1

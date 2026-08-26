@@ -181,7 +181,7 @@ class OrchestrationService:
                     "error": "INFEASIBLE_CONSTRAINTS",
                     "details": "The constraint set has no mathematically feasible solution.",
                 }
-            elif solver_status in ("OPTIMAL", "FEASIBLE", "SUCCESS") and sched_result.is_valid:
+            elif solver_status in ("OPTIMAL", "FEASIBLE", "SUCCESS") and (validation_result is None or validation_result.is_valid):
                 # Step 5: Persist immutable TimetableVersion snapshot
                 created_version = await self.versioning_service.create_new_version(
                     timetable_id=request.timetable_id,

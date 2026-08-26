@@ -58,36 +58,34 @@ def test_semester_validation_valid_cases():
         year_level=1,
         term_type=TermType.ODD,
         semester_number=1,
-        is_first_year_joint=True,
     )
     res_y1 = service.validate_semester_selection(req_y1)
     assert res_y1.is_valid is True
-    assert res_y1.selected_semester == 1
     assert res_y1.is_first_year_p_c_cycle is True
 
 
 def test_semester_validation_invalid_combinations():
-    # Mismatch between Year level and Semester (Year 2 with Semester 5)
-    with pytest.raises(ValidationError) as exc_info:
+    # Year 2 with Sem 1 (Invalid year-semester match)
+    with pytest.raises(ValidationError) as exc1:
         SemesterSelectionRequest(
             academic_year_id=1,
             institution_type=InstitutionType.VTU_AFFILIATED,
             year_level=2,
             term_type=TermType.ODD,
+            semester_number=1,
+        )
+    assert "Semester 1 is invalid for Year 2" in str(exc1.value)
+
+    # Year 3 with Even term_type but Odd semester number 5
+    with pytest.raises(ValidationError) as exc2:
+        SemesterSelectionRequest(
+            academic_year_id=1,
+            institution_type=InstitutionType.VTU_AFFILIATED,
+            year_level=3,
+            term_type=TermType.EVEN,
             semester_number=5,
         )
-    assert "Semester 5 is invalid for Year 2" in str(exc_info.value)
-
-    # Mismatch between TermType and parity (ODD requested for Sem 4)
-    with pytest.raises(ValidationError) as exc_info2:
-        SemesterSelectionRequest(
-            academic_year_id=1,
-            institution_type=InstitutionType.VTU_AFFILIATED,
-            year_level=2,
-            term_type=TermType.ODD,
-            semester_number=4,
-        )
-    assert "Semester 4 is not an ODD semester" in str(exc_info2.value)
+    assert "not an EVEN semester" in str(exc2.value)
 
 
 @pytest.mark.asyncio

@@ -14,35 +14,29 @@ from app.ingestion.parsers import VTUBranchParser, VTUSyllabusParser, FacultyLis
 from app.schemas.ingestion import DocumentConfirmation, BranchCandidate, SubjectCandidate, FacultyCandidate
 from app.services.ingestion_service import IngestionService
 
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+from tests.conftest import TestingSessionLocal, test_engine
 
 
 @pytest_asyncio.fixture
 async def test_ingest_db():
-    engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-    async with engine.begin() as conn:
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-
-    session_factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
-    async with session_factory() as session:
-        inst = Institution(name="VTU Central", code="VTU-01", type=InstitutionType.VTU_AFFILIATED)
+    async with TestingSessionLocal() as session:
+        inst = Institution(id=1, name="VTU Central", code="VTU-01", type=InstitutionType.VTU_AFFILIATED)
         session.add(inst)
         await session.flush()
 
-        scheme = Scheme(institution_id=inst.id, name="2022 Scheme", year=2022)
+        scheme = Scheme(id=1, institution_id=inst.id, name="2022 Scheme", year=2022)
         session.add(scheme)
         await session.flush()
 
-        sem1 = Semester(scheme_id=scheme.id, number=1, term_type=TermType.ODD)
-        sem3 = Semester(scheme_id=scheme.id, number=3, term_type=TermType.ODD)
+        sem1 = Semester(id=1, scheme_id=scheme.id, number=1, term_type=TermType.ODD)
+        sem3 = Semester(id=3, scheme_id=scheme.id, number=3, term_type=TermType.ODD)
         session.add_all([sem1, sem3])
         await session.commit()
 
         yield session
-
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await engine.dispose()
 
 
 def test_ocr_provider_and_mock_fallback():
