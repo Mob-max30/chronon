@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { BatchCalculationResult } from "@/types";
-import { calculateBatchesAPI } from "@/lib/api";
-import { Divide, Users, CheckCircle2, AlertTriangle, RefreshCw, Edit3 } from "lucide-react";
+import { calculateBatchesAPI, createBatch } from "@/lib/api";
+import { Divide, Users, CheckCircle2, AlertTriangle, RefreshCw, Edit3, Database, CheckCircle } from "lucide-react";
 
 export function BatchCalculator() {
   const [sectionStudents, setSectionStudents] = useState<number>(65);
@@ -14,9 +14,12 @@ export function BatchCalculator() {
 
   const [result, setResult] = useState<BatchCalculationResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
   const runCalculation = async () => {
     setLoading(true);
+    setSaveSuccess(null);
     try {
       const res = await calculateBatchesAPI({
         section_students: Math.max(0, sectionStudents),
@@ -35,6 +38,28 @@ export function BatchCalculator() {
   useEffect(() => {
     runCalculation();
   }, [sectionStudents, labCapacity, namingPattern, isOverrideMode, manualCount]);
+
+  const handleCommitToDatabase = async () => {
+    if (!result || !result.batches || result.batches.length === 0) return;
+    setSaving(true);
+    setSaveSuccess(null);
+    try {
+      let count = 0;
+      for (const b of result.batches) {
+        await createBatch({
+          section_id: 1,
+          name: b.name,
+          student_count: b.student_count,
+        });
+        count += 1;
+      }
+      setSaveSuccess(`Successfully saved ${count} lab batch(es) to database!`);
+    } catch (err) {
+      console.error("Failed to commit batches:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const totalAssigned = result?.batches.reduce((sum, b) => sum + b.student_count, 0) || 0;
   const isInvariantSatisfied = totalAssigned === sectionStudents;
@@ -144,6 +169,13 @@ export function BatchCalculator() {
         </div>
       </div>
 
+      {/* Save Success Alert */}
+      {saveSuccess && (
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2">
+          <CheckCircle className="w-4 h-4 text-emerald-400" /> {saveSuccess}
+        </div>
+      )}
+
       {/* Output Results */}
       {result && (
         <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-800 space-y-4">
@@ -157,16 +189,27 @@ export function BatchCalculator() {
               </p>
             </div>
 
-            {/* Invariant Badge */}
-            {isInvariantSatisfied ? (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Invariant: Σ Batch Students = {totalAssigned}
-              </div>
-            ) : (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono font-bold">
-                <AlertTriangle className="w-3.5 h-3.5" /> Invariant Mismatch: Σ = {totalAssigned} != {sectionStudents}
-              </div>
-            )}
+            <div className="flex items-center gap-3">
+              {/* Invariant Badge */}
+              {isInvariantSatisfied ? (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono font-bold">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Invariant: Σ Batches = {totalAssigned}
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-mono font-bold">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Invariant Mismatch: Σ = {totalAssigned} != {sectionStudents}
+                </div>
+              )}
+
+              <button
+                onClick={handleCommitToDatabase}
+                disabled={saving}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition disabled:opacity-50"
+              >
+                <Database className="w-3.5 h-3.5" />
+                {saving ? "Saving..." : "Save Batches to Database"}
+              </button>
+            </div>
           </div>
 
           {/* Batches Grid */}

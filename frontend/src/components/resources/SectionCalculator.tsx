@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { SectionCalculationResult } from "@/types";
-import { calculateSectionsAPI } from "@/lib/api";
-import { Calculator, Users, AlertCircle, CheckCircle, RefreshCw, SlidersHorizontal, Edit3 } from "lucide-react";
+import { calculateSectionsAPI, createSection } from "@/lib/api";
+import { Calculator, Users, AlertCircle, CheckCircle, RefreshCw, SlidersHorizontal, Edit3, Database, Sparkles } from "lucide-react";
 
 export function SectionCalculator() {
   const [studentCount, setStudentCount] = useState<number>(180);
@@ -17,9 +17,12 @@ export function SectionCalculator() {
 
   const [result, setResult] = useState<SectionCalculationResult | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
   const runCalculation = async () => {
     setLoading(true);
+    setSaveSuccess(null);
     try {
       const res = await calculateSectionsAPI({
         student_count: Math.max(0, studentCount),
@@ -41,6 +44,32 @@ export function SectionCalculator() {
   useEffect(() => {
     runCalculation();
   }, [studentCount, roomCapacity, namingPattern, balanceDistribution, isOverrideMode, manualCount, streamId, cycleGroup]);
+
+  const handleCommitToDatabase = async () => {
+    if (!result || !result.sections || result.sections.length === 0) return;
+    setSaving(true);
+    setSaveSuccess(null);
+    try {
+      let count = 0;
+      for (const sec of result.sections) {
+        await createSection({
+          institution_id: 1,
+          branch_id: 1,
+          semester_id: 3,
+          name: sec.name,
+          student_count: sec.student_count,
+          stream_id: streamId,
+          cycle_group: sec.cycle_group || null,
+        });
+        count += 1;
+      }
+      setSaveSuccess(`Successfully saved ${count} section(s) to database!`);
+    } catch (err) {
+      console.error("Failed to commit sections:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -172,6 +201,13 @@ export function SectionCalculator() {
         </div>
       </div>
 
+      {/* Save Success Alert */}
+      {saveSuccess && (
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2">
+          <CheckCircle className="w-4 h-4 text-emerald-400" /> {saveSuccess}
+        </div>
+      )}
+
       {/* Result Display */}
       {result && (
         <div className="bg-slate-900/40 p-6 rounded-2xl border border-slate-800 space-y-4">
@@ -194,9 +230,18 @@ export function SectionCalculator() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 text-xs font-mono">
-              <span className="text-slate-400">Total Enrolled:</span>
-              <span className="text-white font-bold">{result.student_count}</span>
+            <div className="flex items-center gap-3">
+              <div className="text-xs font-mono text-slate-400">
+                Total Enrolled: <span className="text-white font-bold">{result.student_count}</span>
+              </div>
+              <button
+                onClick={handleCommitToDatabase}
+                disabled={saving}
+                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition disabled:opacity-50"
+              >
+                <Database className="w-3.5 h-3.5" />
+                {saving ? "Saving..." : "Save Sections to Database"}
+              </button>
             </div>
           </div>
 

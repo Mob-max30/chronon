@@ -298,6 +298,24 @@ export async function calculateSectionsAPI(payload: any) {
   return res.json();
 }
 
+export async function createSection(payload: any) {
+  const res = await fetch(`${API_BASE}/resources/sections`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return res.json();
+}
+
+export async function createBatch(payload: any) {
+  const res = await fetch(`${API_BASE}/resources/batches`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return res.json();
+}
+
 export async function calculateBatchesAPI(payload: any) {
   const res = await fetch(`${API_BASE}/resources/batches/calculate`, {
     method: "POST",
