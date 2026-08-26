@@ -88,6 +88,23 @@ class AcademicService:
         result = await self.db.execute(stmt)
         return result.scalars().first()
 
+    async def get_timetables_for_year(self, year_id: int) -> List[Any]:
+        if not self.db:
+            return []
+        from app.models.timetable import Timetable
+        from sqlalchemy.orm import selectinload
+        stmt = (
+            select(Timetable)
+            .where(Timetable.academic_year_id == year_id)
+            .options(
+                selectinload(Timetable.academic_year),
+                selectinload(Timetable.versions),
+            )
+            .order_by(Timetable.id.desc())
+        )
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
     async def create_academic_year(self, data: AcademicYearCreate) -> AcademicYear:
         if not self.db:
             return AcademicYear(id=1, **data.model_dump())
