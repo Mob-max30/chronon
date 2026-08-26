@@ -40,8 +40,8 @@ export default function GenerationPage() {
     const poll = async () => {
       try {
         const res = await getGenerationRunStatus(activeRunId);
-        if (res?.data) {
-          const data = res.data;
+        const data = res?.data || res;
+        if (data && data.status) {
           setRunStatus(data.status);
           setStatusDetail(data);
 
@@ -86,10 +86,11 @@ export default function GenerationPage() {
         notes: notes,
       });
 
-      if (res?.data?.generation_run) {
-        setActiveRunId(res.data.generation_run.id);
-        setRunStatus(res.data.generation_run.status);
-        setStatusDetail(res.data.generation_run);
+      const genRun = res?.generation_run || res?.data?.generation_run;
+      if (genRun) {
+        setActiveRunId(genRun.id);
+        setRunStatus(genRun.status);
+        setStatusDetail(genRun);
       }
     } catch (err) {
       console.error(err);
