@@ -74,6 +74,24 @@ async def set_active_version(timetable_id: int, version_id: int, db: AsyncSessio
     )
 
 
+@router.post("/{timetable_id}/version/{version_id}/restore", response_model=APIResponse)
+async def restore_version_as_new(
+    timetable_id: int,
+    version_id: int,
+    notes: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """Restores a historical version by creating a new active copy, preserving snapshot immutability."""
+    service = VersioningService(db)
+    restored = await service.restore_version_as_new(timetable_id, version_id, notes=notes)
+    if not restored:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Version not found")
+    return APIResponse(
+        data=TimetableVersionRead.model_validate(restored),
+        message=f"Version {version_id} restored as new Version {restored.version_number}",
+    )
+
+
 @router.get("/{timetable_id}/diff", response_model=APIResponse)
 async def compare_versions(
     timetable_id: int,

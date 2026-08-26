@@ -164,7 +164,7 @@ class SchedulingInput(BaseModel):
 # ==============================================================================
 class TimetableSessionContract(BaseModel):
     id: Optional[int] = None
-    version_id: int
+    version_id: Optional[int] = None
     subject_id: int
     faculty_id: int
     section_id: int

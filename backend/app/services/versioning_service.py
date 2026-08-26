@@ -120,6 +120,41 @@ class VersioningService:
             await self.db.refresh(target)
         return target
 
+    async def restore_version_as_new(
+        self,
+        timetable_id: int,
+        source_version_id: int,
+        notes: Optional[str] = None,
+    ) -> Optional[TimetableVersion]:
+        """
+        Restores a historical version by copying its sessions into a brand new version snapshot.
+        Preserves immutability of historical versions.
+        """
+        source = await self.get_version_with_sessions(source_version_id)
+        if not source or source.timetable_id != timetable_id:
+            return None
+
+        session_contracts = [
+            TimetableSessionContract(
+                subject_id=s.subject_id,
+                faculty_id=s.faculty_id,
+                section_id=s.section_id,
+                batch_id=s.batch_id,
+                room_id=s.room_id,
+                lab_id=s.lab_id,
+                time_slot_id=s.time_slot_id,
+            )
+            for s in (source.sessions or [])
+        ]
+
+        restore_notes = notes or f"Restored from Version {source.version_number}"
+        return await self.create_new_version(
+            timetable_id=timetable_id,
+            sessions=session_contracts,
+            notes=restore_notes,
+            make_active=True,
+        )
+
     def compute_version_diff(
         self,
         timetable_id: int,

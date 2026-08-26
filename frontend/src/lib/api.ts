@@ -193,6 +193,17 @@ export async function setActiveVersion(timetableId: number, versionId: number) {
   return json.data;
 }
 
+export async function restoreVersionAsNew(timetableId: number, versionId: number, notes?: string) {
+  const res = await fetch(`${API_BASE}/versions/${timetableId}/version/${versionId}/restore`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ notes }),
+  });
+  if (!res.ok) throw new Error("Failed to restore version as new");
+  const json = await res.json();
+  return json.data;
+}
+
 export async function compareVersions(timetableId: number, fromVersionId: number, toVersionId: number) {
   const res = await fetch(
     `${API_BASE}/versions/${timetableId}/diff?from_version_id=${fromVersionId}&to_version_id=${toVersionId}`,

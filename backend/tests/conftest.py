@@ -63,3 +63,10 @@ async def async_client():
     transport = ASGITransport(app=fastapi_app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         yield client
+
+
+@pytest_asyncio.fixture
+async def db_session():
+    async with TestingSessionLocal() as session:
+        yield session
+
