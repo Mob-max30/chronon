@@ -89,6 +89,8 @@ class SectionContract(BaseModel):
     name: str
     student_count: int
     room_id: Optional[int] = None
+    stream_id: Optional[int] = None
+    cycle_group: Optional[str] = None  # PHYSICS_CYCLE or CHEMISTRY_CYCLE
 
 
 class BatchContract(BaseModel):
@@ -126,6 +128,8 @@ class SubjectRequirement(BaseModel):
     eligible_faculty_ids: List[int]
     required_lab_id: Optional[int] = None
     preferred_room_ids: List[int] = Field(default_factory=list)
+    stream_id: Optional[int] = None
+    cycle_group: Optional[str] = None  # PHYSICS_CYCLE or CHEMISTRY_CYCLE or None (common)
 
 
 class ObjectiveWeights(BaseModel):
@@ -148,6 +152,7 @@ class SchedulingInput(BaseModel):
     batches: List[BatchContract]
     time_slots: List[TimeSlotContract]
     subjects: List[SubjectRequirement]
+    streams: List[StreamContract] = Field(default_factory=list)
     faculty_availability: List[FacultyAvailability] = Field(default_factory=list)
     objective_weights: ObjectiveWeights = Field(default_factory=ObjectiveWeights)
     max_solver_time_seconds: int = 120
@@ -167,6 +172,8 @@ class TimetableSessionContract(BaseModel):
     room_id: Optional[int] = None
     lab_id: Optional[int] = None
     time_slot_id: int
+    stream_id: Optional[int] = None
+    cycle_group: Optional[str] = None
 
 
 class TimetableVersionContract(BaseModel):
