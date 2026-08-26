@@ -4,11 +4,6 @@ from app.main import app
 from app.services.timetable_view import build_timetable_matrix, export_timetable_csv
 
 
-@pytest.fixture
-async def async_client():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        yield client
 
 
 def test_build_timetable_matrix_structure():

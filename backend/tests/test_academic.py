@@ -348,5 +348,4 @@ async def test_academic_api_endpoints(test_db_session: AsyncSession):
         res = await client.get("/api/v1/faculty")
         assert res.status_code == 200
         assert len(res.json()["data"]) >= 1
-
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_db, None)

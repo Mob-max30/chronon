@@ -1,14 +1,9 @@
 "use client";
 
 import React from "react";
-<<<<<<< HEAD
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Clock, Calendar, BookOpen, Building2, Cpu, FileText, Grid3X3 } from "lucide-react";
-=======
-import { Clock, Calendar, BookOpen, Users, Cpu, FileText } from "lucide-react";
-import Link from "next/link";
->>>>>>> origin/pranav
 
 export function NavigationShell() {
   const pathname = usePathname();
@@ -28,7 +23,6 @@ export function NavigationShell() {
           </div>
         </Link>
 
-<<<<<<< HEAD
         <nav className="hidden lg:flex items-center space-x-1 text-xs font-semibold">
           <Link
             href="/"
@@ -88,34 +82,12 @@ export function NavigationShell() {
           >
             <Grid3X3 className="w-3.5 h-3.5 text-amber-400" />
             <span>Timetable Grid</span>
-=======
-        <nav className="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-400">
-          <Link href="/academic-year" className="hover:text-slate-100 transition flex items-center gap-1.5">
-            <Calendar className="w-4 h-4 text-blue-400" /> Academic Years
-          </Link>
-          <span className="text-slate-600 flex items-center gap-1.5 cursor-not-allowed">
-            <BookOpen className="w-4 h-4" /> Curriculum (Ujwal)
-          </span>
-          <span className="text-slate-600 flex items-center gap-1.5 cursor-not-allowed">
-            <Users className="w-4 h-4" /> Resources (Nivish)
-          </span>
-          <Link href="/generation" className="hover:text-slate-100 transition flex items-center gap-1.5">
-            <Cpu className="w-4 h-4 text-purple-400" /> Orchestration
-          </Link>
-          <Link href="/versions" className="hover:text-slate-100 transition flex items-center gap-1.5">
-            <FileText className="w-4 h-4 text-emerald-400" /> Versions & Diffs
->>>>>>> origin/pranav
           </Link>
         </nav>
 
         <div className="flex items-center space-x-3">
-<<<<<<< HEAD
           <div className="text-xs text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 font-mono">
             Branch: <span className="text-emerald-400 font-bold">dev</span>
-=======
-          <div className="text-xs text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
-            Branch: <span className="font-mono text-blue-400 font-bold">pranav</span>
->>>>>>> origin/pranav
           </div>
         </div>
       </div>
