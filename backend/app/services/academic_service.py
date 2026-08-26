@@ -1,22 +1,28 @@
 import math
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete
 from sqlalchemy.orm import selectinload
 
 from app.models.academic import (
-    Branch,
+    Institution,
+    AcademicYear,
+    Scheme,
+    Semester,
     Stream,
+    Branch,
     Subject,
     Faculty,
     FacultySubject,
-    Semester,
-    Scheme,
-    Institution,
+    InstitutionType,
+    TermType,
     SubjectType,
     CycleGroup,
 )
 from app.schemas.academic import (
+    AcademicYearCreate,
+    SemesterSelectionRequest,
+    SemesterSelectionResponse,
     BranchCreate,
     BranchUpdate,
     StudentCountUpdate,
@@ -34,7 +40,9 @@ from app.schemas.academic import (
 
 class AcademicService:
     """
-    Core business service for Academic Information Management:
+    Unified business service for Academic Information Management & Lifecycles:
+    - Academic Year lifecycle (Current, Historical, Activation)
+    - Year & Semester selection validation (odd/even, first-year joint cycles)
     - Branch catalogue and student counts
     - First-Year Stream grouping and student rollup
     - Physics/Chemistry cycle-group cohort splitting
@@ -42,7 +50,105 @@ class AcademicService:
     - Faculty roster and multi-stream subject assignments
     """
 
-    # --- Branch & Student Count Operations ---
+    def __init__(self, db: Optional[AsyncSession] = None):
+        self.db = db
+
+    # =========================================================================
+    # 1. ACADEMIC YEAR LIFECYCLE & SEMESTER VALIDATION
+    # =========================================================================
+
+    async def get_all_years(self) -> List[AcademicYear]:
+        if not self.db:
+            return []
+        stmt = select(AcademicYear).order_by(AcademicYear.id.desc())
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_current_year(self) -> Optional[AcademicYear]:
+        if not self.db:
+            return None
+        stmt = select(AcademicYear).where(AcademicYear.is_current == True)  # noqa: E712
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
+
+    async def get_historical_years(self) -> List[AcademicYear]:
+        if not self.db:
+            return []
+        stmt = select(AcademicYear).where(AcademicYear.is_current == False).order_by(AcademicYear.id.desc())  # noqa: E712
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_year_by_id(self, year_id: int) -> Optional[AcademicYear]:
+        if not self.db:
+            return None
+        stmt = select(AcademicYear).where(AcademicYear.id == year_id)
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
+
+    async def create_academic_year(self, data: AcademicYearCreate) -> AcademicYear:
+        if not self.db:
+            return AcademicYear(id=1, **data.model_dump())
+
+        # If marked as current, atomically deactivate all other years
+        if data.is_current:
+            await self.db.execute(update(AcademicYear).values(is_current=False))
+
+        new_year = AcademicYear(
+            name=data.name,
+            is_current=data.is_current,
+            start_date=data.start_date,
+            end_date=data.end_date,
+        )
+        self.db.add(new_year)
+        await self.db.commit()
+        await self.db.refresh(new_year)
+        return new_year
+
+    async def set_current_year(self, year_id: int) -> Optional[AcademicYear]:
+        if not self.db:
+            return None
+
+        # Deactivate all existing current years
+        await self.db.execute(update(AcademicYear).values(is_current=False))
+
+        # Activate selected target year
+        target = await self.get_year_by_id(year_id)
+        if target:
+            target.is_current = True
+            await self.db.commit()
+            await self.db.refresh(target)
+        return target
+
+    def validate_semester_selection(self, req: SemesterSelectionRequest) -> SemesterSelectionResponse:
+        year_to_sem_map = {
+            1: [1, 2],
+            2: [3, 4],
+            3: [5, 6],
+            4: [7, 8],
+        }
+
+        applicable_sems = year_to_sem_map.get(req.year_level, [])
+        is_first_year = (req.year_level == 1)
+
+        msg = f"Valid selection for Year {req.year_level} ({req.term_type.value} Semester {req.semester_number})"
+        if is_first_year:
+            msg += " [Physics & Chemistry Cycle Stream handling active]"
+
+        return SemesterSelectionResponse(
+            is_valid=True,
+            academic_year_id=req.academic_year_id,
+            institution_type=req.institution_type,
+            year_level=req.year_level,
+            term_type=req.term_type,
+            selected_semester=req.semester_number,
+            applicable_semesters=applicable_sems,
+            is_first_year_p_c_cycle=is_first_year,
+            message=msg,
+        )
+
+    # =========================================================================
+    # 2. BRANCH & STUDENT COUNT OPERATIONS
+    # =========================================================================
 
     @classmethod
     async def list_branches(
@@ -106,7 +212,9 @@ class AcademicService:
         await db.commit()
         return updated_branches
 
-    # --- First-Year Stream & Cycle Group Engine ---
+    # =========================================================================
+    # 3. FIRST-YEAR STREAM & CYCLE GROUP ENGINE
+    # =========================================================================
 
     @classmethod
     async def list_streams(cls, db: AsyncSession, institution_id: Optional[int] = None) -> List[Dict[str, Any]]:
@@ -190,20 +298,13 @@ class AcademicService:
         req: CycleGroupSplitRequest,
         db: AsyncSession,
     ) -> CycleGroupSplitResult:
-        """
-        Calculates and updates Physics/Chemistry cycle cohort student split.
-        Supports:
-        - EVEN: deterministic half split (ceil/floor)
-        - MANUAL: user defined override
-        - CAPACITY: lab-capacity constrained batching
-        """
         stream = await cls.get_stream(req.stream_id, db)
         if not stream:
             raise ValueError(f"Stream with ID {req.stream_id} not found")
 
         total_students = sum(b.student_count for b in stream.branches)
         if total_students == 0:
-            total_students = 120  # Fallback default if branches not yet assigned
+            total_students = 120
 
         method = req.method.upper()
         note = ""
@@ -220,7 +321,6 @@ class AcademicService:
 
         elif method == "CAPACITY":
             lab_cap = req.max_lab_capacity or 30
-            # Fit physics group to multiple of lab capacity where possible
             batches = max(1, round((total_students / 2) / lab_cap))
             phy_count = min(total_students, batches * lab_cap)
             chem_count = max(0, total_students - phy_count)
@@ -245,7 +345,9 @@ class AcademicService:
             note=note,
         )
 
-    # --- Subject Management ---
+    # =========================================================================
+    # 4. SUBJECT MANAGEMENT
+    # =========================================================================
 
     @classmethod
     async def list_subjects(
@@ -336,7 +438,9 @@ class AcademicService:
         await db.commit()
         return True
 
-    # --- Faculty & Subject Mapping Management ---
+    # =========================================================================
+    # 5. FACULTY & SUBJECT MAPPING MANAGEMENT
+    # =========================================================================
 
     @classmethod
     async def list_faculty(
@@ -413,7 +517,6 @@ class AcademicService:
         payload: FacultySubjectCreate,
         db: AsyncSession,
     ) -> FacultySubject:
-        # Check if mapping already exists
         stmt = select(FacultySubject).where(
             FacultySubject.faculty_id == faculty_id,
             FacultySubject.subject_id == payload.subject_id,

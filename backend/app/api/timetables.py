@@ -1,14 +1,15 @@
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.db.session import get_db
-from app.models.timetable import Timetable, TimetableVersion, TimetableSession
+from app.models.timetable import Timetable, TimetableVersion, TimetableSession, TimetableStatus
 from app.models.resources import Room, Lab, Section, Batch, TimeSlot
 from app.models.academic import Subject, Faculty
 from app.schemas.contracts import APIResponse
+from app.schemas.timetable import TimetableRead, TimetableCreate, TimetableStatusUpdate
 from app.schemas.timetable_view import TimetableMatrixResponse, TimetableExportResponse
 from app.services.timetable_view import build_timetable_matrix, export_timetable_csv
 
@@ -98,7 +99,6 @@ def get_mock_sessions() -> List[Dict[str, Any]]:
             "stream_id": 1,
             "stream_name": "CSE",
         },
-        # First-year paired slot example
         {
             "id": 5,
             "session_id": 5,
@@ -148,7 +148,7 @@ def get_default_time_slots() -> List[Dict[str, Any]]:
     """Default 6-day period structure for grid rendering."""
     slots = []
     slot_id = 1
-    for day in range(6):  # Mon-Sat
+    for day in range(6):
         periods = [
             {"period_index": 1, "start_time": "09:00:00", "end_time": "10:00:00", "slot_type": "THEORY", "label": "Period 1"},
             {"period_index": 2, "start_time": "10:00:00", "end_time": "11:00:00", "slot_type": "THEORY", "label": "Period 2"},
@@ -174,21 +174,33 @@ def get_default_time_slots() -> List[Dict[str, Any]]:
 
 
 @router.get("", response_model=APIResponse)
-async def list_timetables(db: AsyncSession = Depends(get_db)):
-    """List timetables for academic years."""
-    result = await db.execute(select(Timetable).options(selectinload(Timetable.versions)))
+async def list_timetables(
+    academic_year_id: Optional[int] = None,
+    status_filter: Optional[TimetableStatus] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """List timetables optionally filtered by academic year and status."""
+    stmt = select(Timetable).options(selectinload(Timetable.versions))
+    if academic_year_id:
+        stmt = stmt.where(Timetable.academic_year_id == academic_year_id)
+    if status_filter:
+        stmt = stmt.where(Timetable.status == status_filter)
+    stmt = stmt.order_by(Timetable.id.desc())
+
+    result = await db.execute(stmt)
     timetables = result.scalars().all()
+
     data = []
     for t in timetables:
         data.append({
             "id": t.id,
             "name": t.name,
             "academic_year_id": t.academic_year_id,
-            "status": t.status,
+            "status": t.status.value if hasattr(t.status, "value") else str(t.status),
             "versions_count": len(t.versions),
         })
-    if not data:
-        # Provide sample timetable entry if DB is fresh
+
+    if not data and not academic_year_id and not status_filter:
         data = [
             {
                 "id": 1,
@@ -198,7 +210,49 @@ async def list_timetables(db: AsyncSession = Depends(get_db)):
                 "versions_count": 1,
             }
         ]
+
     return APIResponse(data=data, message="Timetables retrieved successfully")
+
+
+@router.post("", response_model=APIResponse, status_code=status.HTTP_201_CREATED)
+async def create_timetable(payload: TimetableCreate, db: AsyncSession = Depends(get_db)):
+    """Create a new timetable container for an academic year."""
+    new_timetable = Timetable(
+        academic_year_id=payload.academic_year_id,
+        name=payload.name,
+        status=payload.status,
+    )
+    db.add(new_timetable)
+    await db.commit()
+    await db.refresh(new_timetable)
+
+    return APIResponse(
+        data=TimetableRead.model_validate(new_timetable),
+        message="Timetable container created",
+    )
+
+
+@router.patch("/{timetable_id}/status", response_model=APIResponse)
+async def update_timetable_status(
+    timetable_id: int,
+    payload: TimetableStatusUpdate,
+    db: AsyncSession = Depends(get_db),
+):
+    """Update timetable status (DRAFT -> PUBLISHED -> ARCHIVED)."""
+    stmt = select(Timetable).where(Timetable.id == timetable_id)
+    result = await db.execute(stmt)
+    timetable = result.scalars().first()
+    if not timetable:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Timetable not found")
+
+    timetable.status = payload.status
+    await db.commit()
+    await db.refresh(timetable)
+
+    return APIResponse(
+        data=TimetableRead.model_validate(timetable),
+        message=f"Timetable status updated to {payload.status.value}",
+    )
 
 
 @router.get("/{timetable_id}/view", response_model=APIResponse)
@@ -220,7 +274,6 @@ async def get_timetable_view(
     Filterable by Section, Faculty, Room, Lab, Batch, Stream, or Cycle Group.
     Operates strictly on stored/persisted sessions without re-solving.
     """
-    # 1. Fetch DB TimeSlots
     slot_res = await db.execute(select(TimeSlot).order_by(TimeSlot.day_of_week, TimeSlot.period_index))
     db_slots = slot_res.scalars().all()
     time_slots = []
@@ -238,12 +291,10 @@ async def get_timetable_view(
     else:
         time_slots = get_default_time_slots()
 
-    # 2. Fetch DB Sessions
     sessions = []
     if version_id:
         sess_query = select(TimetableSession).where(TimetableSession.version_id == version_id)
     else:
-        # Latest version for timetable
         sess_query = select(TimetableSession).join(TimetableVersion).where(TimetableVersion.timetable_id == timetable_id)
 
     db_sess_res = await db.execute(sess_query)
@@ -263,7 +314,6 @@ async def get_timetable_view(
                 "lab_id": s.lab_id,
             })
     else:
-        # Use presentation fixture
         sessions = get_mock_sessions()
 
     filter_params = {
