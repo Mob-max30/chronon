@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { NavigationShell } from "@/components/NavigationShell";
 import { HealthBadge } from "@/components/HealthBadge";
 import { WorkflowTimeline } from "@/components/WorkflowTimeline";
@@ -91,21 +92,29 @@ export default function HomePage() {
             </div>
 
             {/* Ujwal */}
-            <div className="p-5 rounded-2xl border border-emerald-900/40 bg-slate-900/60 flex flex-col justify-between space-y-4">
+            <Link
+              href="/academic"
+              className="p-5 rounded-2xl border border-emerald-500/30 hover:border-emerald-400 bg-slate-900/60 hover:bg-slate-900/90 flex flex-col justify-between space-y-4 transition group cursor-pointer shadow-lg hover:shadow-emerald-950/30"
+            >
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-md border border-emerald-500/20 font-mono">
                     ujwal
                   </span>
-                  <Database className="w-4 h-4 text-emerald-400" />
+                  <Database className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition" />
                 </div>
-                <h3 className="font-bold text-slate-100">Ujwal</h3>
+                <h3 className="font-bold text-slate-100 flex items-center gap-1.5">
+                  Ujwal <ArrowRight className="w-3.5 h-3.5 text-emerald-400 opacity-0 group-hover:opacity-100 transition" />
+                </h3>
                 <p className="text-xs text-slate-400 mt-2 leading-relaxed">
                   VTU Syllabus OCR, Academic Catalog, Branch/Student counts, Physics/Chemistry cycles, Faculty document ingestion.
                 </p>
               </div>
-              <div className="text-[11px] text-slate-500 font-medium">Domain: Ingestion & Curriculum</div>
-            </div>
+              <div className="text-[11px] text-emerald-400 font-semibold flex items-center justify-between">
+                <span>Domain: Ingestion & Curriculum</span>
+                <span className="text-[10px] bg-emerald-500/20 px-2 py-0.5 rounded">Active</span>
+              </div>
+            </Link>
 
             {/* Pruthvik */}
             <div className="p-5 rounded-2xl border border-purple-900/40 bg-slate-900/60 flex flex-col justify-between space-y-4">

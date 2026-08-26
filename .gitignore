@@ -75,3 +75,5 @@ desktop.ini
 temp_uploads/
 ocr_debug/
 scratch/
+backend/uploads/
+uploads/
