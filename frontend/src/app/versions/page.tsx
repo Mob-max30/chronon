@@ -16,17 +16,18 @@ export default function VersionsPage() {
   const loadVersions = useCallback(async () => {
     try {
       const res = await getTimetableVersions(timetableId);
-      if (res?.data) {
-        setVersions(res.data);
-        if (res.data.length >= 2) {
-          setFromVer(res.data[1].id);
-          setToVer(res.data[0].id);
-        } else if (res.data.length === 1) {
-          setToVer(res.data[0].id);
+      const data = Array.isArray(res) ? res : res?.data || [];
+      if (Array.isArray(data)) {
+        setVersions(data);
+        if (data.length >= 2) {
+          setFromVer(data[1].id);
+          setToVer(data[0].id);
+        } else if (data.length === 1) {
+          setToVer(data[0].id);
         }
       }
     } catch (e) {
-      console.error(e);
+      console.error("Failed to load versions:", e);
     }
   }, [timetableId]);
 
@@ -44,11 +45,12 @@ export default function VersionsPage() {
     setLoading(true);
     try {
       const res = await compareVersions(timetableId, fromVer, toVer);
-      if (res?.data) {
-        setDiffResult(res.data);
+      const data = res?.differences ? res : (res?.data || res);
+      if (data) {
+        setDiffResult(data);
       }
     } catch (e) {
-      console.error(e);
+      console.error("Failed to compare versions:", e);
     } finally {
       setLoading(false);
     }

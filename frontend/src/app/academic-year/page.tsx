@@ -15,9 +15,10 @@ export default function AcademicYearPage() {
   const loadYears = async () => {
     try {
       const res = await getAcademicYears();
-      if (res?.data) setYears(res.data);
+      const data = Array.isArray(res) ? res : res?.data || [];
+      if (Array.isArray(data)) setYears(data);
     } catch (e) {
-      console.error(e);
+      console.error("Failed to load academic years:", e);
     }
   };
 

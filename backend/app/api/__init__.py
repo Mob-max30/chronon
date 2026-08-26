@@ -18,6 +18,7 @@ api_router.include_router(health_router)
 
 # Attach v1 endpoints
 v1_router = APIRouter(prefix="/api/v1")
+v1_router.include_router(health_router)
 v1_router.include_router(academic_years_router)
 v1_router.include_router(branches_router)
 v1_router.include_router(subjects_router)
