@@ -5,15 +5,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.academic import (
+    Institution,
     AcademicYear,
-    Branch,
+    Scheme,
+    Semester,
     Stream,
+    Branch,
     Subject,
     Faculty,
     FacultySubject,
-    Semester,
-    Scheme,
-    Institution,
     InstitutionType,
     TermType,
     SubjectType,
@@ -123,10 +123,6 @@ class AcademicService:
         return target
 
     def validate_semester_selection(self, req: SemesterSelectionRequest) -> SemesterSelectionResponse:
-        """
-        Validates the user's Academic Year -> Year -> Applicable Semester selection
-        according to the Chronon specification.
-        """
         year_to_sem_map = {
             1: [1, 2],
             2: [3, 4],

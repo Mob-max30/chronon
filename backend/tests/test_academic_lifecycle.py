@@ -1,7 +1,6 @@
 import pytest
-from httpx import AsyncClient, ASGITransport
 from pydantic import ValidationError
-from app.main import app
+from httpx import AsyncClient
 from app.services.academic_service import AcademicService
 from app.schemas.academic import (
     AcademicYearCreate,
@@ -11,17 +10,12 @@ from app.schemas.academic import (
 )
 
 
-@pytest.fixture
-async def async_client():
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as client:
-        yield client
-
-
 @pytest.mark.asyncio
 async def test_academic_service_in_memory_creation():
     service = AcademicService(db=None)
-    created = await service.create_academic_year(AcademicYearCreate(name="2026-2027", is_current=True))
+    created = await service.create_academic_year(
+        AcademicYearCreate(name="2026-2027", is_current=True)
+    )
     assert created.name == "2026-2027"
     assert created.is_current is True
 

@@ -9,11 +9,7 @@ from app.models.timetable import Timetable, TimetableVersion, TimetableSession, 
 from app.models.resources import Room, Lab, Section, Batch, TimeSlot
 from app.models.academic import Subject, Faculty
 from app.schemas.contracts import APIResponse
-from app.schemas.timetable import (
-    TimetableRead,
-    TimetableCreate,
-    TimetableStatusUpdate,
-)
+from app.schemas.timetable import TimetableRead, TimetableCreate, TimetableStatusUpdate
 from app.schemas.timetable_view import TimetableMatrixResponse, TimetableExportResponse
 from app.services.timetable_view import build_timetable_matrix, export_timetable_csv
 
@@ -82,10 +78,77 @@ def get_mock_sessions() -> List[Dict[str, Any]]:
             "stream_id": 1,
             "stream_name": "CSE",
         },
+<<<<<<< HEAD
+=======
+        {
+            "id": 4,
+            "session_id": 4,
+            "day_of_week": 0,
+            "time_slot_id": 3,
+            "period_index": 3,
+            "subject_id": 104,
+            "subject_code": "21CSL39",
+            "subject_name": "ADE Lab",
+            "subject_type": "LAB",
+            "faculty_id": 2,
+            "faculty_name": "Prof. Ananya S",
+            "section_id": 1,
+            "section_name": "3A",
+            "batch_id": 2,
+            "batch_name": "3A-B2",
+            "lab_id": 2,
+            "lab_name": "Electronics Hardware Lab",
+            "stream_id": 1,
+            "stream_name": "CSE",
+        },
+        {
+            "id": 5,
+            "session_id": 5,
+            "day_of_week": 1,
+            "time_slot_id": 5,
+            "period_index": 1,
+            "subject_id": 201,
+            "subject_code": "22PHY12",
+            "subject_name": "Applied Physics",
+            "subject_type": "THEORY",
+            "faculty_id": 4,
+            "faculty_name": "Dr. Suresh P",
+            "section_id": 10,
+            "section_name": "1A",
+            "room_id": 1,
+            "room_name": "LH-101",
+            "stream_id": 1,
+            "stream_name": "CSE Stream",
+            "cycle_group": "PHYSICS_CYCLE",
+            "paired_slot_group": "P1",
+        },
+        {
+            "id": 6,
+            "session_id": 6,
+            "day_of_week": 1,
+            "time_slot_id": 5,
+            "period_index": 1,
+            "subject_id": 202,
+            "subject_code": "22CHE12",
+            "subject_name": "Applied Chemistry",
+            "subject_type": "THEORY",
+            "faculty_id": 5,
+            "faculty_name": "Dr. Geeta V",
+            "section_id": 11,
+            "section_name": "1B",
+            "room_id": 2,
+            "room_name": "LH-102",
+            "stream_id": 1,
+            "stream_name": "CSE Stream",
+            "cycle_group": "CHEMISTRY_CYCLE",
+            "paired_slot_group": "P1",
+        },
+>>>>>>> origin/dev
     ]
 
 
 def get_default_time_slots() -> List[Dict[str, Any]]:
+<<<<<<< HEAD
     return [
         {"id": 1, "day_of_week": 0, "period_index": 1, "start_time": "09:00:00", "end_time": "10:00:00", "slot_type": "THEORY", "label": "Period 1"},
         {"id": 2, "day_of_week": 0, "period_index": 2, "start_time": "10:00:00", "end_time": "11:00:00", "slot_type": "THEORY", "label": "Period 2"},
@@ -94,6 +157,34 @@ def get_default_time_slots() -> List[Dict[str, Any]]:
         {"id": 5, "day_of_week": 0, "period_index": 5, "start_time": "14:00:00", "end_time": "15:00:00", "slot_type": "THEORY", "label": "Period 5"},
         {"id": 6, "day_of_week": 0, "period_index": 6, "start_time": "15:00:00", "end_time": "16:00:00", "slot_type": "THEORY", "label": "Period 6"},
     ]
+=======
+    """Default 6-day period structure for grid rendering."""
+    slots = []
+    slot_id = 1
+    for day in range(6):
+        periods = [
+            {"period_index": 1, "start_time": "09:00:00", "end_time": "10:00:00", "slot_type": "THEORY", "label": "Period 1"},
+            {"period_index": 2, "start_time": "10:00:00", "end_time": "11:00:00", "slot_type": "THEORY", "label": "Period 2"},
+            {"period_index": 3, "start_time": "11:00:00", "end_time": "11:15:00", "slot_type": "BREAK", "label": "Tea Break"},
+            {"period_index": 4, "start_time": "11:15:00", "end_time": "12:15:00", "slot_type": "THEORY", "label": "Period 3"},
+            {"period_index": 5, "start_time": "12:15:00", "end_time": "13:15:00", "slot_type": "THEORY", "label": "Period 4"},
+            {"period_index": 6, "start_time": "13:15:00", "end_time": "14:00:00", "slot_type": "LUNCH", "label": "Lunch"},
+            {"period_index": 7, "start_time": "14:00:00", "end_time": "15:00:00", "slot_type": "THEORY", "label": "Period 5"},
+            {"period_index": 8, "start_time": "15:00:00", "end_time": "16:00:00", "slot_type": "THEORY", "label": "Period 6"},
+        ]
+        for p in periods:
+            slots.append({
+                "id": slot_id,
+                "day_of_week": day,
+                "period_index": p["period_index"],
+                "start_time": p["start_time"],
+                "end_time": p["end_time"],
+                "slot_type": p["slot_type"],
+                "label": p["label"],
+            })
+            slot_id += 1
+    return slots
+>>>>>>> origin/dev
 
 
 @router.get("", response_model=APIResponse)
@@ -103,6 +194,7 @@ async def list_timetables(
     status_filter: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
+<<<<<<< HEAD
     """List all timetables, optionally filtered by academic year, semester, or status."""
     stmt = select(Timetable).options(
         selectinload(Timetable.academic_year),
@@ -110,6 +202,10 @@ async def list_timetables(
         selectinload(Timetable.versions),
     ).order_by(Timetable.id.desc())
 
+=======
+    """List timetables optionally filtered by academic year and status."""
+    stmt = select(Timetable).options(selectinload(Timetable.versions))
+>>>>>>> origin/dev
     if academic_year_id:
         stmt = stmt.where(Timetable.academic_year_id == academic_year_id)
     if semester_id:
@@ -119,6 +215,7 @@ async def list_timetables(
 
     result = await db.execute(stmt)
     timetables = result.scalars().all()
+<<<<<<< HEAD
     items = [TimetableRead.model_validate(t) for t in timetables]
     return APIResponse(data=items, message=f"Found {len(items)} timetables")
 
@@ -151,6 +248,36 @@ async def create_timetable(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new timetable container."""
+=======
+
+    data = []
+    for t in timetables:
+        data.append({
+            "id": t.id,
+            "name": t.name,
+            "academic_year_id": t.academic_year_id,
+            "status": t.status.value if hasattr(t.status, "value") else str(t.status),
+            "versions_count": len(t.versions),
+        })
+
+    if not data and not academic_year_id and not status_filter:
+        data = [
+            {
+                "id": 1,
+                "name": "Odd Semester 2026-2027 Timetable",
+                "academic_year_id": 1,
+                "status": "PUBLISHED",
+                "versions_count": 1,
+            }
+        ]
+
+    return APIResponse(data=data, message="Timetables retrieved successfully")
+
+
+@router.post("", response_model=APIResponse, status_code=status.HTTP_201_CREATED)
+async def create_timetable(payload: TimetableCreate, db: AsyncSession = Depends(get_db)):
+    """Create a new timetable container for an academic year."""
+>>>>>>> origin/dev
     new_timetable = Timetable(
         academic_year_id=payload.academic_year_id,
         semester_id=payload.semester_id,
@@ -172,7 +299,11 @@ async def update_timetable_status(
     payload: TimetableStatusUpdate,
     db: AsyncSession = Depends(get_db),
 ):
+<<<<<<< HEAD
     """Update timetable container lifecycle status (DRAFT, ACTIVE, ARCHIVED)."""
+=======
+    """Update timetable status (DRAFT -> PUBLISHED -> ARCHIVED)."""
+>>>>>>> origin/dev
     stmt = select(Timetable).where(Timetable.id == timetable_id)
     res = await db.execute(stmt)
     timetable = res.scalars().first()
@@ -211,7 +342,6 @@ async def get_timetable_view(
     Filterable by Section, Faculty, Room, Lab, Batch, Stream, or Cycle Group.
     Operates strictly on stored/persisted sessions without re-solving.
     """
-    # 1. Fetch DB TimeSlots
     slot_res = await db.execute(select(TimeSlot).order_by(TimeSlot.day_of_week, TimeSlot.period_index))
     db_slots = slot_res.scalars().all()
     time_slots = []
@@ -229,7 +359,6 @@ async def get_timetable_view(
     else:
         time_slots = get_default_time_slots()
 
-    # 2. Fetch DB Sessions
     sessions = []
     if version_id:
         sess_query = select(TimetableSession).where(TimetableSession.version_id == version_id)

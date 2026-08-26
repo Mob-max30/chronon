@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.timetable import GenerationRun, GenerationStatus, Timetable
 from app.schemas.contracts import (
     SchedulingInput,
+    SchedulingResult,
     GenerationRunContract,
     ValidationResult,
 )
@@ -153,15 +154,15 @@ class OrchestrationService:
             # Step 3: Invoke Deterministic CP-SAT Solver via Generator Abstraction
             start_time = time.time()
             if request.is_joint_first_year:
-                sched_res = generate_joint(scheduling_input, scheduling_input)
+                sched_result: SchedulingResult = generate_joint(scheduling_input, scheduling_input)
             else:
-                sched_res = generate_single(scheduling_input)
-            elapsed = time.time() - start_time
+                sched_result: SchedulingResult = generate_single(scheduling_input)
 
-            solver_status = sched_res.status
-            duration = sched_res.execution_time_seconds
-            sessions = sched_res.sessions
-            validation_result = sched_res.validation
+            elapsed = time.time() - start_time
+            solver_status = sched_result.status
+            duration = sched_result.execution_time_seconds or elapsed
+            sessions = sched_result.sessions or []
+            validation_result = sched_result.validation
 
             # Check timeout condition
             if elapsed > request.max_solver_time_seconds or solver_status == "TIMEOUT":
@@ -174,51 +175,45 @@ class OrchestrationService:
                 }
             elif solver_status == "INFEASIBLE":
                 run.status = GenerationStatus.INFEASIBLE
-                run.solver_time_seconds = round(duration or elapsed, 4)
+                run.solver_time_seconds = round(duration, 4)
                 run.completed_at = datetime.utcnow()
                 run.conflict_summary = {
                     "error": "INFEASIBLE_CONSTRAINTS",
                     "details": "The constraint set has no mathematically feasible solution.",
                 }
-            elif solver_status in ("SUCCESS", "OPTIMAL", "FEASIBLE"):
-                if validation_result and validation_result.is_valid:
-                    # Step 5: Persist immutable TimetableVersion snapshot
-                    created_version = await self.versioning_service.create_new_version(
-                        timetable_id=request.timetable_id,
-                        sessions=sessions,
-                        notes=request.notes or f"Generated run #{run.id}",
-                        make_active=True,
-                    )
-                    run.status = GenerationStatus.SUCCESS
-                    run.solver_time_seconds = round(duration or elapsed, 4)
-                    run.completed_at = datetime.utcnow()
-                    run.quality_score = sched_res.quality.overall_score if sched_res.quality else 100.0
-                    run.conflict_summary = {
-                        "validation": "PASSED",
-                        "total_sessions": len(sessions),
-                        "solver_duration_seconds": round(duration or elapsed, 4),
-                        "quality_score": run.quality_score,
-                    }
-                else:
-                    run.status = GenerationStatus.FAILED
-                    run.solver_time_seconds = round(duration or elapsed, 4)
-                    run.completed_at = datetime.utcnow()
-                    run.conflict_summary = {
-                        "error": "VALIDATION_FAILED",
-                        "details": "Validator detected hard constraint clashes.",
-                        "errors": [err.model_dump() for err in validation_result.errors] if validation_result else [],
-                    }
-            else:
-                run.status = GenerationStatus.FAILED
-                run.solver_time_seconds = round(duration or elapsed, 4)
+            elif solver_status in ("OPTIMAL", "FEASIBLE", "SUCCESS") and (validation_result is None or validation_result.is_valid):
+                # Step 5: Persist immutable TimetableVersion snapshot
+                created_version = await self.versioning_service.create_new_version(
+                    timetable_id=request.timetable_id,
+                    sessions=sessions,
+                    notes=request.notes or f"Generated run #{run.id}",
+                    make_active=True,
+                )
+                run.status = GenerationStatus.SUCCESS
+                run.solver_time_seconds = round(duration, 4)
                 run.completed_at = datetime.utcnow()
+                run.quality_score = sched_result.quality.overall_score if sched_result.quality else 100.0
                 run.conflict_summary = {
-                    "error": "SOLVER_FAILED",
-                    "details": "The scheduling engine encountered an unexpected solve failure.",
+                    "validation": "PASSED",
+                    "total_sessions": len(sessions),
+                    "solver_duration_seconds": round(duration, 4),
+                    "quality_score": run.quality_score,
+                }
+            else:
+                # Validation Failed or Solver Failed
+                run.status = GenerationStatus.FAILED
+                run.solver_time_seconds = round(duration, 4)
+                run.completed_at = datetime.utcnow()
+                err_details = sched_result.message
+                if validation_result and not validation_result.is_valid:
+                    err_details = f"Independent validator detected {validation_result.total_hard_violations} hard clashes."
+                run.conflict_summary = {
+                    "error": "SOLVER_FAILED" if solver_status == "FAILED" else "VALIDATION_FAILED",
+                    "details": err_details,
+                    "validation_errors": [e.model_dump() for e in sched_result.conflicts],
                 }
 
         except Exception as exc:
-            # Handle unexpected exceptions cleanly without exposing raw Python tracebacks
             run.status = GenerationStatus.FAILED
             run.completed_at = datetime.utcnow()
             run.conflict_summary = {

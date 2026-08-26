@@ -10,6 +10,7 @@ from app.schemas.timetable import (
 )
 from app.schemas.contracts import APIResponse
 from app.services.orchestration_service import OrchestrationService
+from app.services.pipeline_service import build_scheduling_input_from_db
 
 router = APIRouter(prefix="/generation", tags=["Generation Orchestration & Lifecycle"])
 
@@ -21,14 +22,22 @@ async def trigger_generation(
 ):
     """
     Trigger end-to-end timetable generation:
-    1. Records QUEUED state.
-    2. Transitions to RUNNING.
-    3. Executes CP-SAT solver.
-    4. Runs Independent Validator.
-    5. Persists TimetableVersion snapshot on success.
+    1. Loads active curriculum, faculty, rooms, labs, and slots from DB.
+    2. Records QUEUED state.
+    3. Transitions to RUNNING.
+    4. Executes CP-SAT solver.
+    5. Runs Independent Validator.
+    6. Persists TimetableVersion snapshot on success.
     """
     service = OrchestrationService(db)
-    result = await service.orchestrate_generation(payload)
+    scheduling_input = await build_scheduling_input_from_db(
+        db=db,
+        academic_year_id=payload.academic_year_id,
+        semester_ids=payload.semester_ids,
+        is_joint_first_year=payload.is_joint_first_year,
+        max_solver_time_seconds=payload.max_solver_time_seconds,
+    )
+    result = await service.orchestrate_generation(payload, custom_input=scheduling_input)
     return APIResponse(
         data=result.model_dump(),
         message=f"Generation run completed with status: {result.generation_run.status}",
