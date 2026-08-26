@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -6,13 +7,56 @@ backend_dir = Path(__file__).resolve().parent.parent
 if str(backend_dir) not in sys.path:
     sys.path.insert(0, str(backend_dir))
 
-import os
 import pytest
 from httpx import AsyncClient, ASGITransport
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from app.db.base import Base
+from app.db.session import get_db
 from app.main import app
 
 # Set test environment
 os.environ["ENVIRONMENT"] = "test"
+
+TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
+test_engine = create_async_engine(
+    TEST_DB_URL,
+    echo=False,
+    future=True,
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestingSessionLocal = async_sessionmaker(
+    bind=test_engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False,
+)
+
+
+@pytest.fixture(autouse=True)
+async def init_test_database():
+    """Create all tables before each test and drop them after."""
+    # Import all models to register with Base.metadata
+    import app.models  # noqa: F401
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+    async with test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+
+async def override_get_db():
+    async with TestingSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.close()
+
+
+app.dependency_overrides[get_db] = override_get_db
 
 
 @pytest.fixture
