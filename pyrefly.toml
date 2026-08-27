@@ -1,0 +1,9 @@
+# Pyrefly configuration file
+# See: https://github.com/facebook/pyrefly
+
+[project]
+python-version = "3.12"
+search-paths = ["backend"]
+
+[analysis]
+untyped = true

@@ -9,9 +9,10 @@ from app.models.timetable import Timetable, TimetableVersion, TimetableSession, 
 from app.models.resources import Room, Lab, Section, Batch, TimeSlot
 from app.models.academic import Subject, Faculty
 from app.schemas.contracts import APIResponse
-from app.schemas.timetable import TimetableRead, TimetableCreate, TimetableStatusUpdate
+from app.schemas.timetable import TimetableRead, TimetableCreate, TimetableStatusUpdate, TimetableVersionRead
 from app.schemas.timetable_view import TimetableMatrixResponse, TimetableExportResponse
 from app.services.timetable_view import build_timetable_matrix, export_timetable_csv
+from app.services.versioning_service import VersioningService
 
 router = APIRouter(prefix="/timetables", tags=["Timetables"])
 
@@ -218,6 +219,20 @@ async def get_timetable(
             detail=f"Timetable container {timetable_id} not found",
         )
     return APIResponse(data=TimetableRead.model_validate(timetable), message="Timetable retrieved")
+
+
+@router.get("/{timetable_id}/versions", response_model=APIResponse)
+async def get_timetable_versions(
+    timetable_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """Retrieve complete version history list for a timetable container."""
+    service = VersioningService(db)
+    versions = await service.get_versions_for_timetable(timetable_id)
+    return APIResponse(
+        data=[TimetableVersionRead.model_validate(v) for v in versions],
+        message="Version history retrieved successfully",
+    )
 
 
 @router.post("", response_model=APIResponse, status_code=status.HTTP_201_CREATED)

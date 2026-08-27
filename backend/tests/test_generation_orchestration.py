@@ -96,3 +96,30 @@ async def test_orchestration_structured_error_no_leaks():
     assert "EXECUTION_EXCEPTION" in result.generation_run.conflict_summary["error"]
     assert "details" in result.generation_run.conflict_summary
     assert isinstance(result.generation_run.conflict_summary["details"], str)
+
+
+@pytest.mark.asyncio
+async def test_canonical_generation_runs_endpoints(async_client):
+    """Test canonical /api/v1/generation-runs routes specified in Bible Section 47."""
+    payload = {
+        "timetable_id": 1,
+        "academic_year_id": 1,
+        "semester_ids": [3],
+        "is_joint_first_year": False,
+        "triggered_by": "api_test",
+        "notes": "Canonical API test",
+        "max_solver_time_seconds": 60,
+    }
+    # 1. Trigger run via canonical route POST /api/v1/generation-runs
+    res_trig = await async_client.post("/api/v1/generation-runs", json=payload)
+    assert res_trig.status_code == 201
+    run_id = res_trig.json()["data"]["generation_run"]["id"]
+
+    # 2. Get status via canonical route GET /api/v1/generation-runs/{id}
+    res_stat = await async_client.get(f"/api/v1/generation-runs/{run_id}")
+    assert res_stat.status_code == 200
+    assert res_stat.json()["data"]["generation_run_id"] == run_id
+
+    # 3. Cancel via canonical route POST /api/v1/generation-runs/{id}/cancel
+    res_canc = await async_client.post(f"/api/v1/generation-runs/{run_id}/cancel")
+    assert res_canc.status_code == 200

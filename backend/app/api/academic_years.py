@@ -2,6 +2,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
+from app.schemas.timetable import TimetableRead
 from app.schemas.academic import (
     AcademicYearRead,
     AcademicYearCreate,
@@ -62,6 +63,23 @@ async def get_academic_year_by_id(year_id: int, db: AsyncSession = Depends(get_d
     return APIResponse(
         data=AcademicYearRead.model_validate(year),
         message="Academic year retrieved",
+    )
+
+
+@router.get("/{year_id}/timetables", response_model=APIResponse)
+async def get_academic_year_timetables(year_id: int, db: AsyncSession = Depends(get_db)):
+    """Retrieve all timetables belonging to a specific academic year."""
+    service = AcademicService(db)
+    year = await service.get_year_by_id(year_id)
+    if not year:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Academic year with ID {year_id} not found",
+        )
+    timetables = await service.get_timetables_for_year(year_id)
+    return APIResponse(
+        data=[TimetableRead.model_validate(t) for t in timetables],
+        message=f"Timetables for academic year {year_id} retrieved successfully",
     )
 
 

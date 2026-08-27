@@ -10,19 +10,24 @@ _AsyncSessionLocal = None
 def get_engine():
     global _engine
     if _engine is None:
-        try:
-            import asyncpg  # noqa
-            _engine = create_async_engine(
-                settings.DATABASE_URL,
-                echo=settings.DEBUG,
-                future=True,
-                pool_pre_ping=True,
-            )
-        except ImportError:
+        db_url = settings.DATABASE_URL
+        if "postgresql" in db_url:
+            try:
+                import asyncpg  # noqa
+                _engine = create_async_engine(
+                    db_url,
+                    echo=settings.DEBUG,
+                    future=True,
+                    pool_pre_ping=True,
+                )
+            except Exception:
+                _engine = None
+
+        if _engine is None:
             try:
                 import aiosqlite  # noqa
                 _engine = create_async_engine(
-                    "sqlite+aiosqlite:///:memory:",
+                    "sqlite+aiosqlite:///chronon_dev.db",
                     echo=False,
                     future=True,
                 )

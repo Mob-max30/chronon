@@ -119,3 +119,17 @@ async def test_api_academic_years_endpoints(async_client: AsyncClient):
     data = res_val.json()
     assert data["success"] is True
     assert data["data"]["selected_semester"] == 3
+
+    # Create an academic year
+    create_res = await async_client.post(
+        "/api/v1/academic-years",
+        json={"name": "2026-2027-Lifecycle", "is_current": True},
+    )
+    assert create_res.status_code == 201
+    created_id = create_res.json()["data"]["id"]
+
+    # Test GET /api/v1/academic-years/{id}/timetables
+    res_tt = await async_client.get(f"/api/v1/academic-years/{created_id}/timetables")
+    assert res_tt.status_code == 200
+    assert res_tt.json()["success"] is True
+    assert isinstance(res_tt.json()["data"], list)

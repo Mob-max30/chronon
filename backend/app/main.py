@@ -1,7 +1,19 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api import api_router
+from app.db.init_db import init_db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: initialize database and seed baseline if needed
+    try:
+        await init_db()
+    except Exception as e:
+        print(f"Warning: init_db encountered: {e}")
+    yield
 
 
 def create_application() -> FastAPI:
@@ -10,6 +22,7 @@ def create_application() -> FastAPI:
         openapi_url=f"{settings.API_V1_STR}/openapi.json",
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=lifespan,
     )
 
     # Configure CORS
