@@ -275,21 +275,20 @@ export default function GenerationPage() {
                 <div className="space-y-4">
                   {/* Status Banner */}
                   <div
-                    className={`p-4 rounded-xl border flex items-center gap-3 ${
-                      runStatus === "SUCCESS"
+                    className={`p-4 rounded-xl border flex items-center gap-3 ${runStatus === "SUCCESS"
                         ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-300"
                         : runStatus === "RUNNING"
-                        ? "bg-blue-950/20 border-blue-500/30 text-blue-300"
-                        : runStatus === "QUEUED"
-                        ? "bg-slate-900 border-slate-700 text-slate-300"
-                        : runStatus === "INFEASIBLE"
-                        ? "bg-purple-950/20 border-purple-500/30 text-purple-300"
-                        : runStatus === "TIMEOUT"
-                        ? "bg-orange-950/20 border-orange-500/30 text-orange-300"
-                        : runStatus === "CANCELLED"
-                        ? "bg-slate-900/60 border-slate-700 text-slate-400"
-                        : "bg-rose-950/20 border-rose-500/30 text-rose-300"
-                    }`}
+                          ? "bg-blue-950/20 border-blue-500/30 text-blue-300"
+                          : runStatus === "QUEUED"
+                            ? "bg-slate-900 border-slate-700 text-slate-300"
+                            : runStatus === "INFEASIBLE"
+                              ? "bg-purple-950/20 border-purple-500/30 text-purple-300"
+                              : runStatus === "TIMEOUT"
+                                ? "bg-orange-950/20 border-orange-500/30 text-orange-300"
+                                : runStatus === "CANCELLED"
+                                  ? "bg-slate-900/60 border-slate-700 text-slate-400"
+                                  : "bg-rose-950/20 border-rose-500/30 text-rose-300"
+                      }`}
                   >
                     {runStatus === "SUCCESS" && <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0" />}
                     {runStatus === "RUNNING" && <RefreshCw className="w-6 h-6 text-blue-400 animate-spin shrink-0" />}
@@ -325,8 +324,8 @@ export default function GenerationPage() {
                         {statusDetail?.elapsed_seconds !== undefined
                           ? `${statusDetail.elapsed_seconds}s`
                           : statusDetail?.solver_time_seconds !== undefined
-                          ? `${statusDetail.solver_time_seconds}s`
-                          : "0.0s"}
+                            ? `${statusDetail.solver_time_seconds}s`
+                            : "0.0s"}
                       </div>
                     </div>
                     <div className="p-3 rounded-xl border border-slate-800 bg-slate-900/80 text-center">
